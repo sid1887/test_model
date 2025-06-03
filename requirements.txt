@@ -1,0 +1,54 @@
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Task Queue
+celery==5.5.3
+redis==6.2.0
+
+# Database
+sqlalchemy==2.0.41
+alembic==1.16.1
+asyncpg==0.30.0
+psycopg2-binary==2.9.9
+
+# Image Processing & AI
+ultralytics==8.0.206
+opencv-python-headless==4.8.1.78
+tensorflow==2.15.0
+torch==2.1.2
+torchvision==0.16.2
+Pillow==10.1.0
+numpy==1.24.3
+imgaug==0.4.0
+
+# CLIP for Image-Text Matching
+transformers==4.35.2
+sentence-transformers==2.2.2
+clip-by-openai==1.0
+faiss-cpu==1.7.4
+
+# Web Scraping
+scrapy==2.11.0
+playwright==1.40.0
+playwright-stealth==1.0.6
+requests==2.31.0
+beautifulsoup4==4.12.2
+fake-useragent==1.4.0
+selenium==4.15.2
+
+# CAPTCHA Solving
+pytesseract==0.3.10
+
+# Monitoring & Logging
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Utilities
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+aiofiles==23.2.1
+httpx==0.25.2
