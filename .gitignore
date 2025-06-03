@@ -1,0 +1,118 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
+.env.local
+.env.production
+.env.development
+
+# Database
+*.db
+*.sqlite3
+postgres_data/
+redis_data/
+
+# AI Models (large files)
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pb
+models/yolov8*.pt
+models/clip_models/
+models/sentence_transformers/
+
+# CLIP indexes (can be rebuilt)
+models/clip_indexes/
+*.faiss
+*.pkl
+
+# Logs
+logs/
+*.log
+log.txt
+
+# Uploads and temporary files
+uploads/
+temp/
+tmp/
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Test files
+test_product*.jpg
+test_*.jpg
+
+# Node modules (for scraper)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Monitoring
+prometheus_data/
+grafana_data/
+
+# Alembic
+alembic.ini.bak

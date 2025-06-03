@@ -1,0 +1,309 @@
+"""
+CLIP-based Image Search Service
+Implements zero-shot image-to-product matching using OpenAI CLIP
+"""
+
+import torch
+import clip
+import numpy as np
+from PIL import Image
+import faiss
+import pickle
+import os
+import logging
+from typing import List, Dict, Tuple, Optional
+from pathlib import Path
+import asyncio
+from sentence_transformers import SentenceTransformer
+
+from app.core.config import settings
+from app.core.monitoring import logger
+
+class CLIPSearchService:
+    """CLIP-based semantic search for product images and text"""
+    
+    def __init__(self):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.clip_model = None
+        self.clip_preprocess = None
+        self.sentence_model = None
+        self.image_index = None
+        self.text_index = None
+        self.product_metadata = {}
+        self.index_path = Path(settings.models_dir) / "clip_indexes"
+        self.index_path.mkdir(exist_ok=True)
+        
+    async def initialize(self):
+        """Initialize CLIP models and load existing indexes"""
+        try:
+            # Load CLIP model
+            logger.info(f"Loading CLIP model: {settings.clip_model_name}")
+            self.clip_model, self.clip_preprocess = clip.load(
+                settings.clip_model_name, 
+                device=self.device
+            )
+            
+            # Load sentence transformer for text embeddings
+            self.sentence_model = SentenceTransformer('all-MiniLM-L6-v2')
+            
+            # Load existing indexes if available
+            await self._load_indexes()
+            
+            logger.info("CLIP search service initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize CLIP service: {e}")
+            raise
+    
+    async def encode_image(self, image_path: str) -> np.ndarray:
+        """Encode image to CLIP embedding"""
+        try:
+            image = Image.open(image_path).convert('RGB')
+            image_tensor = self.clip_preprocess(image).unsqueeze(0).to(self.device)
+            
+            with torch.no_grad():
+                image_features = self.clip_model.encode_image(image_tensor)
+                image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+                
+            return image_features.cpu().numpy().flatten()
+            
+        except Exception as e:
+            logger.error(f"Failed to encode image {image_path}: {e}")
+            raise
+    
+    async def encode_text(self, text: str) -> np.ndarray:
+        """Encode text to CLIP embedding"""
+        try:
+            text_token = clip.tokenize([text]).to(self.device)
+            
+            with torch.no_grad():
+                text_features = self.clip_model.encode_text(text_token)
+                text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+                
+            return text_features.cpu().numpy().flatten()
+            
+        except Exception as e:
+            logger.error(f"Failed to encode text '{text}': {e}")
+            raise
+    
+    async def encode_text_sentence_transformer(self, text: str) -> np.ndarray:
+        """Alternative text encoding using sentence transformers"""
+        try:
+            embedding = self.sentence_model.encode([text])
+            return embedding.flatten()
+        except Exception as e:
+            logger.error(f"Failed to encode text with sentence transformer: {e}")
+            raise
+    
+    async def add_product_to_index(self, product_id: int, image_path: str, 
+                                 title: str, description: str = ""):
+        """Add a product to the search indexes"""
+        try:
+            # Encode image
+            image_embedding = await self.encode_image(image_path)
+            
+            # Encode text (title + description)
+            text_content = f"{title} {description}".strip()
+            text_embedding = await self.encode_text(text_content)
+            
+            # Initialize indexes if they don't exist
+            if self.image_index is None:
+                self.image_index = faiss.IndexFlatIP(image_embedding.shape[0])
+                self.text_index = faiss.IndexFlatIP(text_embedding.shape[0])
+            
+            # Add to indexes
+            self.image_index.add(image_embedding.reshape(1, -1))
+            self.text_index.add(text_embedding.reshape(1, -1))
+            
+            # Store metadata
+            index_id = self.image_index.ntotal - 1
+            self.product_metadata[index_id] = {
+                'product_id': product_id,
+                'title': title,
+                'description': description,
+                'image_path': image_path
+            }
+            
+            logger.info(f"Added product {product_id} to CLIP indexes")
+            
+        except Exception as e:
+            logger.error(f"Failed to add product {product_id} to index: {e}")
+            raise
+    
+    async def search_by_image(self, query_image_path: str, 
+                            top_k: int = 10) -> List[Dict]:
+        """Search for similar products using an image query"""
+        try:
+            if self.image_index is None or self.image_index.ntotal == 0:
+                return []
+            
+            # Encode query image
+            query_embedding = await self.encode_image(query_image_path)
+            
+            # Search
+            scores, indices = self.image_index.search(
+                query_embedding.reshape(1, -1), top_k
+            )
+            
+            # Format results
+            results = []
+            for score, idx in zip(scores[0], indices[0]):
+                if idx in self.product_metadata:
+                    result = self.product_metadata[idx].copy()
+                    result['similarity_score'] = float(score)
+                    results.append(result)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Image search failed: {e}")
+            raise
+    
+    async def search_by_text(self, query_text: str, 
+                           top_k: int = 10) -> List[Dict]:
+        """Search for products using text query"""
+        try:
+            if self.text_index is None or self.text_index.ntotal == 0:
+                return []
+            
+            # Encode query text
+            query_embedding = await self.encode_text(query_text)
+            
+            # Search
+            scores, indices = self.text_index.search(
+                query_embedding.reshape(1, -1), top_k
+            )
+            
+            # Format results
+            results = []
+            for score, idx in zip(scores[0], indices[0]):
+                if idx in self.product_metadata:
+                    result = self.product_metadata[idx].copy()
+                    result['similarity_score'] = float(score)
+                    results.append(result)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Text search failed: {e}")
+            raise
+    
+    async def hybrid_search(self, query_text: str = None, 
+                          query_image_path: str = None,
+                          top_k: int = 10, 
+                          text_weight: float = 0.5) -> List[Dict]:
+        """Perform hybrid text + image search"""
+        try:
+            if query_text is None and query_image_path is None:
+                raise ValueError("At least one of query_text or query_image_path must be provided")
+            
+            text_results = []
+            image_results = []
+            
+            # Get text results
+            if query_text:
+                text_results = await self.search_by_text(query_text, top_k * 2)
+            
+            # Get image results
+            if query_image_path:
+                image_results = await self.search_by_image(query_image_path, top_k * 2)
+            
+            # Combine results
+            if not text_results:
+                return image_results[:top_k]
+            elif not image_results:
+                return text_results[:top_k]
+            
+            # Hybrid scoring
+            combined_scores = {}
+            
+            # Add text scores
+            for result in text_results:
+                product_id = result['product_id']
+                combined_scores[product_id] = {
+                    'text_score': result['similarity_score'] * text_weight,
+                    'image_score': 0,
+                    'metadata': result
+                }
+            
+            # Add image scores
+            for result in image_results:
+                product_id = result['product_id']
+                if product_id in combined_scores:
+                    combined_scores[product_id]['image_score'] = \
+                        result['similarity_score'] * (1 - text_weight)
+                else:
+                    combined_scores[product_id] = {
+                        'text_score': 0,
+                        'image_score': result['similarity_score'] * (1 - text_weight),
+                        'metadata': result
+                    }
+            
+            # Calculate final scores and sort
+            final_results = []
+            for product_id, scores in combined_scores.items():
+                final_score = scores['text_score'] + scores['image_score']
+                result = scores['metadata'].copy()
+                result['hybrid_score'] = final_score
+                result['text_component'] = scores['text_score']
+                result['image_component'] = scores['image_score']
+                final_results.append(result)
+            
+            # Sort by hybrid score and return top_k
+            final_results.sort(key=lambda x: x['hybrid_score'], reverse=True)
+            return final_results[:top_k]
+            
+        except Exception as e:
+            logger.error(f"Hybrid search failed: {e}")
+            raise
+    
+    async def save_indexes(self):
+        """Save CLIP indexes to disk"""
+        try:
+            if self.image_index is not None:
+                faiss.write_index(
+                    self.image_index, 
+                    str(self.index_path / "image_index.faiss")
+                )
+            
+            if self.text_index is not None:
+                faiss.write_index(
+                    self.text_index, 
+                    str(self.index_path / "text_index.faiss")
+                )
+            
+            # Save metadata
+            with open(self.index_path / "metadata.pkl", 'wb') as f:
+                pickle.dump(self.product_metadata, f)
+            
+            logger.info("CLIP indexes saved successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to save indexes: {e}")
+            raise
+    
+    async def _load_indexes(self):
+        """Load existing CLIP indexes from disk"""
+        try:
+            image_index_path = self.index_path / "image_index.faiss"
+            text_index_path = self.index_path / "text_index.faiss"
+            metadata_path = self.index_path / "metadata.pkl"
+            
+            if image_index_path.exists():
+                self.image_index = faiss.read_index(str(image_index_path))
+                logger.info(f"Loaded image index with {self.image_index.ntotal} vectors")
+            
+            if text_index_path.exists():
+                self.text_index = faiss.read_index(str(text_index_path))
+                logger.info(f"Loaded text index with {self.text_index.ntotal} vectors")
+            
+            if metadata_path.exists():
+                with open(metadata_path, 'rb') as f:
+                    self.product_metadata = pickle.load(f)
+                logger.info(f"Loaded metadata for {len(self.product_metadata)} products")
+            
+        except Exception as e:
+            logger.warning(f"Could not load existing indexes: {e}")
+
+# Global instance
+clip_service = CLIPSearchService()

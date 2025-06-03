@@ -1,0 +1,167 @@
+Here's a refined, detailed open-source implementation plan for Compair with zero budget:
+
+Compair: Open-Source AI Product Analysis & Price Comparison System
+Core Architecture
+text
+graph TD
+    A[User Request] --> B{FastAPI Gateway}
+    B --> C[Celery Task Queue]
+    C --> D[Image Analysis Pipeline]
+    C --> E[Adaptive Scraping Engine]
+    D --> F[PostgreSQL]
+    E --> F
+    F --> G[Redis Cache]
+    G --> B
+1. Image Analysis Service (Days 3-6)
+1.1 Object Detection Stack
+YOLOv8 Implementation:
+
+bash
+pip install ultralytics opencv-python-headless
+python
+from ultralytics import YOLO
+
+model = YOLO('yolov8n.pt')
+results = model.predict(source='product.jpg', conf=0.5)
+results[0].save_crop('product_crop.jpg')  # Save detected product
+1.2 Custom Spec Extraction
+Fine-Tuning Pipeline:
+
+Create synthetic dataset using OpenCV:
+
+python
+import cv2
+from imgaug import augmenters as iaa
+
+seq = iaa.Sequential([iaa.GaussianBlur(sigma=(0, 3.0)), 
+                    iaa.Affine(rotate=(-25, 25))])
+augmented_image = seq.augment_image(cv2.imread('product_crop.jpg'))
+Train EfficientNet-B0 feature extractor:
+
+python
+from tensorflow.keras.applications import EfficientNetB0
+
+base_model = EfficientNetB0(include_top=False, weights='imagenet')
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+predictions = Dense(128, activation='relu')(x)  # Custom specs
+model = Model(inputs=base_model.input, outputs=predictions)
+2. Adaptive Web Scraping Engine (Days 7-11)
+2.1 Multi-Layer Scraping
+python
+class AdaptiveScraper:
+    def __init__(self):
+        self.strategies = [
+            self._direct_api_scrape,    # 1st layer
+            self._html_parse_scrape,    # 2nd layer 
+            self._headless_browser      # 3rd layer
+        ]
+        
+    def execute(self, url):
+        for strategy in self.strategies:
+            result = strategy(url)
+            if result['status'] == 'success':
+                return result
+            self._learn_from_failure(result)
+        return {'status': 'failed'}
+
+    def _direct_api_scrape(self, url):
+        # Implement API discovery logic
+        pass
+2.2 Anti-Block System
+Component	Open-Source Solution	Implementation
+Proxy Rotation	Rota ([GitHub])	docker-compose up -d rota
+CAPTCHA Solving	Tesseract + CNN	See CAPTCHA Pipeline
+Fingerprinting	Playwright-Stealth	pip install playwright-stealth
+UA Rotation	Fake UserAgent	pip install fake-useragent
+3. CAPTCHA Solving Pipeline (Days 10-11)
+python
+from PIL import ImageFilter
+import pytesseract
+import numpy as np
+
+def solve_captcha(image_path):
+    # Preprocessing
+    img = Image.open(image_path).convert('L')
+    img = img.filter(ImageFilter.SHARPEN)
+    img_array = np.array(img)
+    
+    # Adaptive thresholding
+    img_array = np.where(img_array > 128, 255, 0)
+    
+    # OCR with Tesseract
+    text = pytesseract.image_to_string(img_array)
+    
+    # Fallback to CNN
+    if not text.isalnum():
+        text = cnn_predictor.predict(img_array)
+    
+    return text
+Installation: pip install pytesseract pillow
+
+4. Proxy Management System (Days 10-11)
+python
+import requests
+from rota_client import RotaClient  # Using Rota API [5]
+
+class ProxyManager:
+    def __init__(self):
+        self.client = RotaClient(base_url="http://localhost:8000")
+        self.proxy_pool = self.client.get_proxies()
+    
+    def get_proxy(self):
+        return self.proxy_pool.get_least_used()
+    
+    def ban_proxy(self, proxy):
+        self.client.report_failure(proxy)
+        
+    def refresh_pool(self):
+        # Auto-update from free sources [8]
+        free_proxies = self._scrape_free_proxies()
+        self.client.add_proxies(free_proxies)
+5. Deployment & Monitoring (Day 14-15)
+5.1 Zero-Cost Infrastructure
+text
+# docker-compose.yml
+services:
+  redis:
+    image: redis:alpine
+  postgres:
+    image: postgres:15
+  rota:
+    image: ghcr.io/alpkeskin/rota:latest
+  worker:
+    build: .
+    command: celery -A worker worker --loglevel=info
+  api:
+    build: .
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+5.2 Monitoring Stack
+bash
+# Prometheus + Grafana
+docker run -p 9090:9090 prom/prometheus
+docker run -d -p 3000:3000 grafana/grafana-oss
+6. Optimization Techniques
+6.1 Scrapy Performance Tweaks
+python
+# settings.py
+CONCURRENT_REQUESTS = 100
+DOWNLOAD_DELAY = 0.25
+AUTOTHROTTLE_ENABLED = True
+HTTPCACHE_ENABLED = True
+6.2 Model Quantization
+python
+import tensorflow as tf
+
+converter = tf.lite.TFLiteConverter.from_saved_model('spec_model')
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+tflite_model = converter.convert()
+with open('spec_model.tflite', 'wb') as f:
+    f.write(tflite_model)
+Development Roadmap
+Week	Focus Area	Key Milestones
+1	Core Infrastructure	FastAPI scaffold, Celery integration, Base models
+2	Vision Pipeline	YOLO integration, CNN training, OpenCV pipeline
+3	Scraping System	Multi-layer scraper, Proxy rotation, CAPTCHA solver
+4	Resilience	Failure learning, Auto-fallback, Load testing
+5	Deployment	Docker setup, Monitoring, Security hardening
