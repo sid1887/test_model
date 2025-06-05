@@ -1,5 +1,5 @@
 """
-Compair: Open-Source AI Product Analysis & Price Comparison System
+Cumpair: Open-Source AI Product Analysis & Price Comparison System
 Main FastAPI application entry point
 """
 
@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.routes import analysis, analysis_new, comparison, health
+from app.api.routes import analysis, analysis_new, comparison, health, price_comparison
 from app.core.monitoring import setup_monitoring
 
 @asynccontextmanager
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="Compair",
+    title="Cumpair",
     description="Open-Source AI Product Analysis & Price Comparison System",
     version="1.0.0",
     lifespan=lifespan
@@ -84,6 +84,7 @@ app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
 app.include_router(analysis_new.router, prefix="/api/v1", tags=["analysis-ai"])
 app.include_router(comparison.router, prefix="/api/v1", tags=["comparison"])
+app.include_router(price_comparison.router, tags=["price-comparison"])
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -97,7 +98,7 @@ async def root():
         return """
         <html>
             <head>
-                <title>Compair - Product Analysis & Price Comparison</title>
+                <title>Cumpair - Product Analysis & Price Comparison</title>
                 <style>
                     body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
                     .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -108,7 +109,7 @@ async def root():
             </head>
             <body>
                 <div class="container">
-                    <h1>🔍 Compair</h1>
+                    <h1>🔍 Cumpair</h1>
                     <p>AI-Powered Product Analysis & Price Comparison System</p>
                     
                     <div class="alert">

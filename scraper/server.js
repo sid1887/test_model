@@ -1,5 +1,5 @@
 /**
- * Compair Scraping Microservice
+ * Cumpair Scraping Microservice
  * Node.js + Puppeteer-based e-commerce scraper with anti-bot measures
  */
 
@@ -203,6 +203,64 @@ const getBrowser = async () => {
   return browserInstance;
 };
 
+// Enhanced scraper with Python service integration
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
+
+// POST product data to Python feature extraction service
+async function postToPythonService(productData) {
+  try {
+    const response = await axios.post(`${PYTHON_SERVICE_URL}/analysis/ingest-scraped-product`, {
+      product_id: productData.id,
+      site: productData.site,
+      url: productData.link,
+      title: productData.title,
+      price_raw: productData.price,
+      currency: 'USD',
+      image_url: productData.image,
+      timestamp: new Date().toISOString()
+    }, {
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    logger.info(`Successfully posted product ${productData.id} to Python service`);
+    return response.data;
+  } catch (error) {
+    logger.error(`Failed to post product ${productData.id} to Python service: ${error.message}`);
+    
+    // Add to retry queue (Redis or file-based)
+    await addToRetryQueue(productData);
+    throw error;
+  }
+}
+
+// Add failed product to retry queue
+async function addToRetryQueue(productData) {
+  try {
+    // Simple file-based retry queue (in production, use Redis)
+    const retryQueue = 'logs/retry_queue.json';
+    let queue = [];
+    
+    if (require('fs').existsSync(retryQueue)) {
+      const data = require('fs').readFileSync(retryQueue, 'utf8');
+      queue = JSON.parse(data);
+    }
+    
+    queue.push({
+      ...productData,
+      retry_count: (productData.retry_count || 0) + 1,
+      failed_at: new Date().toISOString()
+    });
+    
+    require('fs').writeFileSync(retryQueue, JSON.stringify(queue, null, 2));
+    logger.info(`Added product ${productData.id} to retry queue`);
+  } catch (error) {
+    logger.error(`Failed to add to retry queue: ${error.message}`);
+  }
+}
+
 // Routes
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
@@ -218,12 +276,32 @@ app.post('/scrape', rateLimiterMiddleware, async (req, res) => {
   try {
     const browser = await getBrowser();
     const results = [];
+    const pythonServiceResults = [];
 
     // Run scrapers in parallel
     const scrapingPromises = sites.map(async (site) => {
       if (scrapers[site]) {
         try {
           const siteResults = await scrapers[site].search(query, browser);
+          
+          // Process each result through Python service
+          for (const product of siteResults) {
+            // Generate unique product ID
+            product.id = `${site}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            try {
+              // POST to Python feature extraction service
+              const pythonResult = await postToPythonService(product);
+              pythonServiceResults.push({
+                product: product,
+                processing: pythonResult
+              });
+            } catch (error) {
+              // Continue even if Python service fails
+              logger.error(`Python service failed for product ${product.id}: ${error.message}`);
+            }
+          }
+          
           return siteResults;
         } catch (error) {
           logger.error(`Error scraping ${site}: ${error.message}`);
@@ -252,14 +330,14 @@ app.post('/scrape', rateLimiterMiddleware, async (req, res) => {
     res.json({
       query,
       results,
+      python_service_processed: pythonServiceResults.length,
       metadata: {
         total_results: results.length,
         sites_scraped: sites,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        feature_extraction_enabled: true
       }
-    });
-
-  } catch (error) {
+    });  } catch (error) {
     logger.error(`Scraping error: ${error.message}`);
     res.status(500).json({ error: 'Internal scraping error' });
   }

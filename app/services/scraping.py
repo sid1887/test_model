@@ -1,6 +1,7 @@
 """
 Adaptive Web Scraping Engine - Multi-layer scraping with anti-blocking measures
 Implements direct API, HTML parsing, and headless browser strategies
+Enhanced with dedicated web scraper integration
 """
 
 import asyncio
@@ -19,6 +20,110 @@ import re
 
 from app.core.config import settings
 from app.core.monitoring import SCRAPING_COUNT, logger
+
+# Integration with our dedicated web scraper
+class CumpairScraperClient:
+    """Client to communicate with our dedicated scraper service"""
+    
+    def __init__(self, base_url: str = "http://localhost:3000"):
+        self.base_url = base_url
+        self.session = None
+        
+    async def initialize(self):
+        """Initialize the scraper client session"""
+        self.session = aiohttp.ClientSession()
+        
+        # Test connection to scraper service
+        try:
+            async with self.session.get(f"{self.base_url}/health") as response:
+                if response.status == 200:
+                    logger.info("✅ Connected to dedicated scraper service")
+                    return True
+        except Exception as e:
+            logger.warning(f"⚠️ Dedicated scraper service not available: {e}")
+            return False
+        
+    async def scrape_url(self, url: str, options: Dict = None) -> Dict:
+        """Scrape a single URL using the dedicated scraper"""
+        if not self.session:
+            await self.initialize()
+            
+        try:
+            payload = {"url": url}
+            if options:
+                payload.update(options)
+                
+            async with self.session.post(
+                f"{self.base_url}/api/scrape",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                result = await response.json()
+                
+                if result.get("success"):
+                    return {
+                        "status": "success",
+                        "data": result.get("data", {}),
+                        "url": url,
+                        "timestamp": result.get("timestamp"),
+                        "response_time": result.get("responseTime")
+                    }
+                else:
+                    return {
+                        "status": "failed",
+                        "error": result.get("error", "Unknown error"),
+                        "url": url
+                    }
+                    
+        except Exception as e:
+            logger.error(f"❌ Scraper service error for {url}: {e}")
+            return {
+                "status": "failed",
+                "error": str(e),
+                "url": url
+            }
+    
+    async def scrape_batch(self, urls: List[str], options: Dict = None) -> List[Dict]:
+        """Scrape multiple URLs concurrently"""
+        if not self.session:
+            await self.initialize()
+            
+        try:
+            payload = {"urls": urls}
+            if options:
+                payload.update(options)
+                
+            async with self.session.post(
+                f"{self.base_url}/api/scrape/batch",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                results = await response.json()
+                return results.get("results", [])
+                
+        except Exception as e:
+            logger.error(f"❌ Batch scraper service error: {e}")
+            return []
+    
+    async def get_stats(self) -> Dict:
+        """Get scraper statistics"""
+        if not self.session:
+            await self.initialize()
+            
+        try:
+            async with self.session.get(f"{self.base_url}/api/stats") as response:
+                return await response.json()
+        except Exception as e:
+            logger.error(f"❌ Error getting scraper stats: {e}")
+            return {}
+    
+    async def close(self):
+        """Close the session"""
+        if self.session:
+            await self.session.close()
+
+# Global scraper client instance
+scraper_client = CumpairScraperClient()
 
 class ProxyManager:
     """Manages proxy rotation and failure handling"""

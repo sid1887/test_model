@@ -2,9 +2,10 @@
 FastAPI routes for product analysis and image upload
 """
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any, Union
 import asyncio
 import json
 import uuid
@@ -20,6 +21,9 @@ from app.core.database import get_db_session
 
 # AI services
 from app.services.ai_models import ProductAnalyzer, ModelManager
+from app.services.feature_extraction import feature_extraction_service
+from app.core.monitoring import logger
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
@@ -396,6 +400,57 @@ async def get_analysis_history(skip: int = 0, limit: int = 10):
         raise HTTPException(status_code=500, detail=f"History retrieval failed: {str(e)}")
 
 
+@router.post("/ingest-scraped-product")
+async def ingest_scraped_product(request: Request):
+    """
+    Ingest a product JSON from the Node.js scraper and process features.
+    This endpoint receives scraped product data, processes it through the
+    streaming pipeline (download image to RAM, compute embeddings, store metadata)
+    and returns only the distilled metadata.
+    """
+    try:
+        product_json = await request.json()
+        
+        # Validate required fields
+        required_fields = ['product_id', 'site', 'title', 'price_raw', 'image_url']
+        missing_fields = [field for field in required_fields if not product_json.get(field)]
+        
+        if missing_fields:
+            return JSONResponse({
+                "status": "error",
+                "error": f"Missing required fields: {missing_fields}"
+            }, status_code=400)
+        
+        # Process through feature extraction pipeline
+        metadata = await feature_extraction_service.process_scraped_product(product_json)
+        
+        return JSONResponse({
+            "status": "processed",
+            "metadata": metadata
+        })
+        
+    except json.JSONDecodeError:
+        return JSONResponse({
+            "status": "error",
+            "error": "Invalid JSON payload"
+        }, status_code=400)
+    except Exception as e:
+        logger.error(f"Error ingesting scraped product: {e}")
+        return JSONResponse({
+            "status": "error",
+            "error": str(e)
+        }, status_code=500)
+
+@router.get("/processing-stats")
+async def get_processing_stats():
+    """Get statistics about the feature extraction processing"""
+    try:
+        stats = feature_extraction_service.get_metadata_stats()
+        return JSONResponse(stats)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 async def analyze_product_background(product_id: int, image_path: str):
     """Background task to analyze a product image using AI models."""
     
@@ -548,3 +603,83 @@ async def analyze_product_background(product_id: int, image_path: str):
                 await session.commit()
         except Exception as db_error:
             print(f"❌ Failed to save error to database: {db_error}")
+
+class SearchQuery(BaseModel):
+    query: str
+    limit: Optional[int] = 10
+    min_similarity: Optional[float] = 0.7
+
+class ImageSearchQuery(BaseModel):
+    limit: Optional[int] = 10
+    min_similarity: Optional[float] = 0.7
+
+@router.post("/search-products")
+async def search_products(query: SearchQuery):
+    """
+    Search for products using text query via FAISS similarity search
+    """
+    try:
+        results = await feature_extraction_service.search_products_by_text(
+            query.query, 
+            limit=query.limit,
+            min_similarity=query.min_similarity
+        )
+        
+        return JSONResponse({
+            "query": query.query,
+            "results": results,
+            "total": len(results),
+            "status": "success"
+        })
+        
+    except Exception as e:
+        logger.error(f"Text search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/search-by-image")
+async def search_by_image(
+    file: UploadFile = File(...),
+    limit: int = 10,
+    min_similarity: float = 0.7
+):
+    """
+    Search for similar products using uploaded image via FAISS
+    """
+    try:
+        # Validate image
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Read image data
+        image_data = await file.read()
+        
+        # Search using feature extraction service
+        results = await feature_extraction_service.search_products_by_image(
+            image_data,
+            limit=limit,
+            min_similarity=min_similarity
+        )
+        
+        return JSONResponse({
+            "filename": file.filename,
+            "results": results,
+            "total": len(results),
+            "status": "success"
+        })
+        
+    except Exception as e:
+        logger.error(f"Image search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/search-stats")
+async def get_search_stats():
+    """
+    Get search index statistics and health
+    """
+    try:
+        stats = await feature_extraction_service.get_search_stats()
+        return JSONResponse(stats)
+        
+    except Exception as e:
+        logger.error(f"Search stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

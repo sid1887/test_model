@@ -1,6 +1,6 @@
-# Compair - Open-Source AI Product Analysis & Price Comparison System
+# Cumpair - Open-Source AI Product Analysis & Price Comparison System
 
-🔍 **Compair** is a comprehensive AI-powered system that analyzes product images and compares prices across multiple e-commerce platforms using advanced computer vision and adaptive web scraping techniques.
+🔍 **Cumpair** is a comprehensive AI-powered system that analyzes product images and compares prices across multiple e-commerce platforms using advanced computer vision and adaptive web scraping techniques.
 
 ## 🚀 Features
 

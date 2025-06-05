@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AI Model Manager for Compair - Handles YOLO, EfficientNet, and CLIP models
+AI Model Manager for Cumpair - Handles YOLO, EfficientNet, and CLIP models
 """
 
 import asyncio
@@ -670,7 +670,7 @@ product_analyzer = ProductAnalyzer(model_manager)
 
 async def initialize_ai_system():
     """Initialize the complete AI system."""
-    print("🔥 Initializing Compair AI System...")
+    print("🔥 Initializing Cumpair AI System...")
     success = await model_manager.initialize_models()
     if success:
         print("🚀 AI System ready for product analysis!")

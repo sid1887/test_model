@@ -17,7 +17,7 @@ async def health_check():
     """Basic health check endpoint"""
     return {
         "status": "healthy",
-        "service": "Compair API",
+        "service": "Cumpair API",
         "version": settings.app_version
     }
 
@@ -26,7 +26,7 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     """Detailed health check including dependencies"""
     health_status = {
         "status": "healthy",
-        "service": "Compair API",
+        "service": "Cumpair API",
         "version": settings.app_version,
         "checks": {}
     }

@@ -34,10 +34,10 @@ class Product(Base):
       # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    # Relationships
+      # Relationships
     analyses = relationship("Analysis", back_populates="product")
     price_comparisons = relationship("PriceComparison", back_populates="product")
+    price_history = relationship("PriceHistory", back_populates="product")
     
     def __repr__(self):
         return f"<Product(id={self.id}, name='{self.name}', brand='{self.brand}')>"

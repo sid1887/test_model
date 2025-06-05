@@ -1,7 +1,7 @@
-# Quick Start Script for Compair
+# Quick Start Script for Cumpair
 # This script starts all necessary services
 
-Write-Host "🔍 Starting Compair Services" -ForegroundColor Cyan
+Write-Host "🔍 Starting Cumpair Services" -ForegroundColor Cyan
 Write-Host "=" * 40 -ForegroundColor Blue
 
 # Function to check if a service is running

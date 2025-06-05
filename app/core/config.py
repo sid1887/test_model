@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # App Configuration
-    app_name: str = "Compair"
+    app_name: str = "Cumpair"
     app_version: str = "1.0.0"
     debug: bool = False
     

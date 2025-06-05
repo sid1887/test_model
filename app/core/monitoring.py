@@ -9,31 +9,31 @@ import structlog
 
 # Prometheus metrics
 REQUEST_COUNT = Counter(
-    'compair_requests_total',
+    'cumpair_requests_total',
     'Total number of requests',
     ['method', 'endpoint', 'status']
 )
 
 REQUEST_DURATION = Histogram(
-    'compair_request_duration_seconds',
+    'cumpair_request_duration_seconds',
     'Request duration in seconds',
     ['method', 'endpoint']
 )
 
 ANALYSIS_COUNT = Counter(
-    'compair_analysis_total',
+    'cumpair_analysis_total',
     'Total number of image analyses',
     ['status']
 )
 
 SCRAPING_COUNT = Counter(
-    'compair_scraping_total',
+    'cumpair_scraping_total',
     'Total number of scraping attempts',
     ['site', 'status']
 )
 
 ACTIVE_TASKS = Gauge(
-    'compair_active_tasks',
+    'cumpair_active_tasks',
     'Number of active Celery tasks'
 )
 

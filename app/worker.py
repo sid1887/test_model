@@ -14,7 +14,7 @@ from app.core.monitoring import ACTIVE_TASKS
 
 # Configure Celery
 celery_app = Celery(
-    "compair",
+    "cumpair",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
     include=['app.worker']

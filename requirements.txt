@@ -27,7 +27,7 @@ imgaug==0.4.0
 # CLIP for Image-Text Matching
 transformers==4.35.2
 sentence-transformers==2.2.2
-clip-by-openai==1.0
+git+https://github.com/openai/CLIP.git
 faiss-cpu==1.7.4
 
 # Web Scraping
