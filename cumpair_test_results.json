@@ -1,0 +1,666 @@
+{
+  "text_search": [
+    {
+      "query": "Floral Print Round-Shaped Wall Clock",
+      "status": "error",
+      "error": "HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=10)"
+    },
+    {
+      "query": "Loving Swans Wall Painting with Frame",
+      "status": "error",
+      "error": "HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=10)"
+    },
+    {
+      "query": "Suction Drain Soap Tray",
+      "status": "success",
+      "response_time": 5.830148935317993,
+      "results_count": 0,
+      "results": []
+    },
+    {
+      "query": "Mini Diary with Pen - Shinchan",
+      "status": "success",
+      "response_time": 2.12021541595459,
+      "results_count": 0,
+      "results": []
+    },
+    {
+      "query": "Iron Man Hand Fan",
+      "status": "success",
+      "response_time": 2.1401755809783936,
+      "results_count": 0,
+      "results": []
+    },
+    {
+      "query": "Peacock Dance 3-Piece Vinyl Wall Painting",
+      "status": "success",
+      "response_time": 2.1048247814178467,
+      "results_count": 0,
+      "results": []
+    },
+    {
+      "query": "Heavy-Duty Retractable Utility Knife",
+      "status": "success",
+      "response_time": 2.131218910217285,
+      "results_count": 0,
+      "results": []
+    },
+    {
+      "query": "Cute Ghost Silicone Night Light",
+      "status": "success",
+      "response_time": 2.1121537685394287,
+      "results_count": 0,
+      "results": []
+    },
+    {
+      "query": "Trash Bin Lamp cum Pen Holder",
+      "status": "success",
+      "response_time": 2.1156787872314453,
+      "results_count": 0,
+      "results": []
+    },
+    {
+      "query": "Harry Potter Metal Keychain",
+      "status": "success",
+      "response_time": 2.1139256954193115,
+      "results_count": 0,
+      "results": []
+    }
+  ],
+  "image_search": [
+    {
+      "image": "download (1).jpg",
+      "status": "success",
+      "response_time": 2.3218166828155518,
+      "analysis": {
+        "status": "uploaded",
+        "message": "Image uploaded successfully, analysis started",
+        "product_id": 1,
+        "file_path": "uploads\\9d4a3a1b-2a4a-431f-80c1-17e05f34e14c.jpg",
+        "image_hash": "c84bc4d779404a5768257ffe1e8806c9",
+        "estimated_processing_time": "30-60 seconds"
+      }
+    },
+    {
+      "image": "download (10).jpg",
+      "status": "success",
+      "response_time": 5.976971864700317,
+      "analysis": {
+        "status": "uploaded",
+        "message": "Image uploaded successfully, analysis started",
+        "product_id": 2,
+        "file_path": "uploads\\04167bfd-bbba-4829-831c-bc2a139bb913.jpg",
+        "image_hash": "c56d53f6a5acde25006604b6b71f55fb",
+        "estimated_processing_time": "30-60 seconds"
+      }
+    },
+    {
+      "image": "download (11).jpg",
+      "status": "success",
+      "response_time": 2.117758274078369,
+      "analysis": {
+        "status": "uploaded",
+        "message": "Image uploaded successfully, analysis started",
+        "product_id": 3,
+        "file_path": "uploads\\8a557edd-677b-4096-a9d2-6c34f18cc40e.jpg",
+        "image_hash": "df3b2f9d95b2f458b80c477a2fc6fd9b",
+        "estimated_processing_time": "30-60 seconds"
+      }
+    },
+    {
+      "image": "download (2).jpg",
+      "status": "success",
+      "response_time": 2.1152353286743164,
+      "analysis": {
+        "status": "uploaded",
+        "message": "Image uploaded successfully, analysis started",
+        "product_id": 4,
+        "file_path": "uploads\\d6fe3a37-0ca8-4217-8c19-385b64351959.jpg",
+        "image_hash": "ff4edfd8cfa01f5be938f5b412f66880",
+        "estimated_processing_time": "30-60 seconds"
+      }
+    },
+    {
+      "image": "download (3).jpg",
+      "status": "success",
+      "response_time": 2.118858814239502,
+      "analysis": {
+        "status": "uploaded",
+        "message": "Image uploaded successfully, analysis started",
+        "product_id": 5,
+        "file_path": "uploads\\2a123d1c-176d-4312-ac78-03753c630891.jpg",
+        "image_hash": "4a16e1b5d0c6c5f3dafd4a5378a94392",
+        "estimated_processing_time": "30-60 seconds"
+      }
+    }
+  ],
+  "clip_search": [
+    {
+      "image": "download (1).jpg",
+      "status": "success",
+      "response_time": 2.109128952026367,
+      "matches": 9,
+      "results": [
+        {
+          "product_id": 1,
+          "title": "Product_9d4a3a1b",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 1.000000238418579,
+          "image_path": "uploads\\9d4a3a1b-2a4a-431f-80c1-17e05f34e14c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6382204294204712,
+          "image_path": "uploads\\2a123d1c-176d-4312-ac78-03753c630891.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5966646075248718,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5966646075248718,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5877534747123718,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5877534747123718,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 2,
+          "title": "Product_04167bfd",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5661720037460327,
+          "image_path": "uploads\\04167bfd-bbba-4829-831c-bc2a139bb913.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5530483722686768,
+          "image_path": "uploads\\d6fe3a37-0ca8-4217-8c19-385b64351959.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 3,
+          "title": "Product_8a557edd",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5425489544868469,
+          "image_path": "uploads\\8a557edd-677b-4096-a9d2-6c34f18cc40e.jpg",
+          "detection_confidence": null
+        }
+      ]
+    },
+    {
+      "image": "download (10).jpg",
+      "status": "success",
+      "response_time": 2.167463541030884,
+      "matches": 8,
+      "results": [
+        {
+          "product_id": 2,
+          "title": "Product_04167bfd",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.9999998807907104,
+          "image_path": "uploads\\04167bfd-bbba-4829-831c-bc2a139bb913.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 3,
+          "title": "Product_8a557edd",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6524752378463745,
+          "image_path": "uploads\\8a557edd-677b-4096-a9d2-6c34f18cc40e.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 1,
+          "title": "Product_9d4a3a1b",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5661720037460327,
+          "image_path": "uploads\\9d4a3a1b-2a4a-431f-80c1-17e05f34e14c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.461394339799881,
+          "image_path": "uploads\\2a123d1c-176d-4312-ac78-03753c630891.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.43792030215263367,
+          "image_path": "uploads\\d6fe3a37-0ca8-4217-8c19-385b64351959.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.43480679392814636,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.43480679392814636,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.4037376642227173,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        }
+      ]
+    },
+    {
+      "image": "download (11).jpg",
+      "status": "success",
+      "response_time": 2.1731951236724854,
+      "matches": 8,
+      "results": [
+        {
+          "product_id": 3,
+          "title": "Product_8a557edd",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.9999999403953552,
+          "image_path": "uploads\\8a557edd-677b-4096-a9d2-6c34f18cc40e.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 2,
+          "title": "Product_04167bfd",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6524752378463745,
+          "image_path": "uploads\\04167bfd-bbba-4829-831c-bc2a139bb913.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 1,
+          "title": "Product_9d4a3a1b",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5425489544868469,
+          "image_path": "uploads\\9d4a3a1b-2a4a-431f-80c1-17e05f34e14c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.4798240065574646,
+          "image_path": "uploads\\2a123d1c-176d-4312-ac78-03753c630891.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.461273729801178,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.461273729801178,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.46036580204963684,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.46036580204963684,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        }
+      ]
+    },
+    {
+      "image": "download (2).jpg",
+      "status": "success",
+      "response_time": 2.1513125896453857,
+      "matches": 9,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 1.0000001192092896,
+          "image_path": "uploads\\d6fe3a37-0ca8-4217-8c19-385b64351959.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6668283939361572,
+          "image_path": "uploads\\2a123d1c-176d-4312-ac78-03753c630891.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 1,
+          "title": "Product_9d4a3a1b",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5530483722686768,
+          "image_path": "uploads\\9d4a3a1b-2a4a-431f-80c1-17e05f34e14c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5438394546508789,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5438394546508789,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5090163350105286,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5090163350105286,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 2,
+          "title": "Product_04167bfd",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.43792030215263367,
+          "image_path": "uploads\\04167bfd-bbba-4829-831c-bc2a139bb913.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 3,
+          "title": "Product_8a557edd",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.43425917625427246,
+          "image_path": "uploads\\8a557edd-677b-4096-a9d2-6c34f18cc40e.jpg",
+          "detection_confidence": null
+        }
+      ]
+    },
+    {
+      "image": "download (3).jpg",
+      "status": "success",
+      "response_time": 2.1753177642822266,
+      "matches": 8,
+      "results": [
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 1.0,
+          "image_path": "uploads\\2a123d1c-176d-4312-ac78-03753c630891.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6668283939361572,
+          "image_path": "uploads\\d6fe3a37-0ca8-4217-8c19-385b64351959.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 1,
+          "title": "Product_9d4a3a1b",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6382204294204712,
+          "image_path": "uploads\\9d4a3a1b-2a4a-431f-80c1-17e05f34e14c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5638280510902405,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5638280510902405,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5508923530578613,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5508923530578613,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 3,
+          "title": "Product_8a557edd",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.4798240065574646,
+          "image_path": "uploads\\8a557edd-677b-4096-a9d2-6c34f18cc40e.jpg",
+          "detection_confidence": null
+        }
+      ]
+    }
+  ],
+  "web_scraping": [
+    {
+      "query": "Floral Print Round-Shaped Wall Clock",
+      "status": "error",
+      "response_time": 4.615628719329834,
+      "error": "HTTP 503"
+    },
+    {
+      "query": "Loving Swans Wall Painting with Frame",
+      "status": "error",
+      "response_time": 4.631553649902344,
+      "error": "HTTP 503"
+    },
+    {
+      "query": "Suction Drain Soap Tray",
+      "status": "error",
+      "response_time": 4.599477529525757,
+      "error": "HTTP 503"
+    },
+    {
+      "query": "Mini Diary with Pen - Shinchan",
+      "status": "error",
+      "response_time": 4.593472480773926,
+      "error": "HTTP 503"
+    },
+    {
+      "query": "Iron Man Hand Fan",
+      "status": "error",
+      "response_time": 4.602147102355957,
+      "error": "HTTP 503"
+    }
+  ],
+  "performance_metrics": {
+    "text_search": {
+      "total_tests": 10,
+      "successful": 8,
+      "success_rate": 80.0,
+      "avg_response_time": 2.5835427343845367,
+      "min_response_time": 2.1048247814178467,
+      "max_response_time": 5.830148935317993
+    },
+    "image_search": {
+      "total_tests": 5,
+      "successful": 5,
+      "success_rate": 100.0,
+      "avg_response_time": 2.9301281929016114,
+      "min_response_time": 2.1152353286743164,
+      "max_response_time": 5.976971864700317
+    },
+    "clip_search": {
+      "total_tests": 5,
+      "successful": 5,
+      "success_rate": 100.0,
+      "avg_response_time": 2.1552835941314696,
+      "min_response_time": 2.109128952026367,
+      "max_response_time": 2.1753177642822266
+    },
+    "web_scraping": {
+      "total_tests": 5,
+      "successful": 0,
+      "success_rate": 0.0,
+      "avg_response_time": 0,
+      "min_response_time": 0,
+      "max_response_time": 0
+    }
+  },
+  "summary": {}
+}

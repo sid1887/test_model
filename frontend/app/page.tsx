@@ -51,7 +51,7 @@ interface SearchResult {
   metadata?: any;
 }
 
-export default function HomePage() {
+export default function HomePage(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
