@@ -9,6 +9,11 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # PostgreSQL database
   postgres:
@@ -21,81 +26,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  # Proxy rotation service (Rota)
-  rota:
-    image: ghcr.io/alpkeskin/rota:latest
-    ports:
-      - "8001:8000"
-    environment:
-      - ROTA_REDIS_URL=redis://redis:6379
-
-  # Main FastAPI application
-  api:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
-      - REDIS_URL=redis://redis:6379
-      - ROTA_URL=http://rota:8000
-    depends_on:
-      - postgres
-      - redis
-      - rota
-    volumes:
-      - ./app:/app
-      - ./models:/models
-      - ./uploads:/uploads
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
-  # Celery worker
-  worker:
-    build: .
-    environment:
-      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
-      - REDIS_URL=redis://redis:6379
-      - ROTA_URL=http://rota:8000
-    depends_on:
-      - postgres
-      - redis
-      - rota
-    volumes:
-      - ./app:/app
-      - ./models:/models
-      - ./uploads:/uploads
-    command: celery -A app.worker worker --loglevel=info
-
-  # Celery flower for monitoring
-  flower:
-    build: .
-    ports:
-      - "5555:5555"
-    environment:
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - redis
-    command: celery -A app.worker flower --port=5555
-
-  # Prometheus for monitoring
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-
-  # Grafana for dashboards
-  grafana:
-    image: grafana/grafana-oss:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana_data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U compair"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   redis_data:
   postgres_data:
-  grafana_data:

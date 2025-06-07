@@ -15,7 +15,7 @@ from app.core.database import get_db
 from app.models.product import Product
 from app.models.price_comparison import PriceComparison, PriceHistory
 from app.services.scraping import scraper_client, scraping_engine
-from app.services.ai_models import get_clip_model
+from app.services.ai_models import model_manager
 from app.core.monitoring import logger
 import numpy as np
 
@@ -62,11 +62,10 @@ class CumpairPriceEngine:
     async def initialize(self):
         """Initialize the price comparison engine"""
         try:
-            # Initialize scraper client
-            await self.scraper_client.initialize()
+            # Initialize scraper client            await self.scraper_client.initialize()
             
             # Load CLIP model for product matching
-            self.clip_model = await get_clip_model()
+            self.clip_model = model_manager.clip_model
             
             logger.info("✅ Cumpair Price Engine initialized successfully")
             return True
