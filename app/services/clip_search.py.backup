@@ -123,90 +123,81 @@ class CLIPSearchService:
                 'description': description,
                 'image_path': image_path
             }
-            
-            logger.info(f"Added product {product_id} to CLIP indexes")
-            
-        except Exception as e:
+              logger.info(f"Added product {product_id} to CLIP indexes")
+              except Exception as e:
             logger.error(f"Failed to add product {product_id} to index: {e}")
             raise
     
     async def search_by_image(self, query_image_path: str, 
                             top_k: int = 10) -> List[Dict]:
-        """Search for similar products using an image query"""
+        """Search for similar products using an image query with deduplication"""
         try:
             if self.image_index is None or self.image_index.ntotal == 0:
                 return []
             
             # Encode query image
             query_embedding = await self.encode_image(query_image_path)
-              # Search
+            
+            # Search with larger result set to account for duplicates
+            search_k = min(top_k * 3, self.image_index.ntotal)
             scores, indices = self.image_index.search(
-                query_embedding.reshape(1, -1), top_k * 2  # Get more results to allow for deduplication
+                query_embedding.reshape(1, -1), search_k
             )
             
-            # Format results with deduplication by product_id
-            results = []
-            seen_product_ids = set()
-            
+            # Deduplicate by product_id and keep highest scoring entry
+            seen_products = {}
             for score, idx in zip(scores[0], indices[0]):
                 if idx in self.product_metadata:
-                    product_id = self.product_metadata[idx]['product_id']
-                    
-                    # Skip if we've already seen this product
-                    if product_id in seen_product_ids:
-                        continue
-                    
-                    seen_product_ids.add(product_id)
                     result = self.product_metadata[idx].copy()
                     result['similarity_score'] = float(score)
-                    results.append(result)
+                    product_id = result['product_id']
                     
-                    # Stop if we have enough unique results
-                    if len(results) >= top_k:
-                        break
+                    # Keep only the highest scoring entry for each product
+                    if product_id not in seen_products or result['similarity_score'] > seen_products[product_id]['similarity_score']:
+                        seen_products[product_id] = result
             
-            return results
+            # Return top_k unique results sorted by score
+            unique_results = list(seen_products.values())
+            unique_results.sort(key=lambda x: x['similarity_score'], reverse=True)
+            
+            return unique_results[:top_k]
             
         except Exception as e:
             logger.error(f"Image search failed: {e}")
             raise
-    
-    async def search_by_text(self, query_text: str, 
+      async def search_by_text(self, query_text: str, 
                            top_k: int = 10) -> List[Dict]:
-        """Search for products using text query"""
+        """Search for products using text query with deduplication"""
         try:
             if self.text_index is None or self.text_index.ntotal == 0:
                 return []
             
             # Encode query text
             query_embedding = await self.encode_text(query_text)
-              # Search
+            
+            # Search with larger result set to account for duplicates
+            search_k = min(top_k * 3, self.text_index.ntotal)
             scores, indices = self.text_index.search(
-                query_embedding.reshape(1, -1), top_k * 2  # Get more results to allow for deduplication
+                query_embedding.reshape(1, -1), search_k
             )
             
-            # Format results with deduplication by product_id
-            results = []
-            seen_product_ids = set()
-            
+            # Deduplicate by product_id and keep highest scoring entry
+            seen_products = {}
             for score, idx in zip(scores[0], indices[0]):
                 if idx in self.product_metadata:
-                    product_id = self.product_metadata[idx]['product_id']
-                    
-                    # Skip if we've already seen this product
-                    if product_id in seen_product_ids:
-                        continue
-                    
-                    seen_product_ids.add(product_id)
                     result = self.product_metadata[idx].copy()
                     result['similarity_score'] = float(score)
-                    results.append(result)
+                    product_id = result['product_id']
                     
-                    # Stop if we have enough unique results
-                    if len(results) >= top_k:
-                        break
+                    # Keep only the highest scoring entry for each product
+                    if product_id not in seen_products or result['similarity_score'] > seen_products[product_id]['similarity_score']:
+                        seen_products[product_id] = result
             
-            return results
+            # Return top_k unique results sorted by score
+            unique_results = list(seen_products.values())
+            unique_results.sort(key=lambda x: x['similarity_score'], reverse=True)
+            
+            return unique_results[:top_k]
             
         except Exception as e:
             logger.error(f"Text search failed: {e}")

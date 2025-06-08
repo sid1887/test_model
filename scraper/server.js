@@ -59,24 +59,74 @@ const rateLimiterMiddleware = async (req, res, next) => {
 };
 
 // Site-specific scrapers
-const scrapers = {
-  amazon: {
+const scrapers = {  amazon: {
     search: async (query, browser) => {
       const page = await browser.newPage();
       try {
-        await page.setUserAgent(new UserAgent().toString());
-        await page.goto(`https://www.amazon.com/s?k=${encodeURIComponent(query)}`, {
-          waitUntil: 'networkidle0',
-          timeout: 30000
+        // Enhanced anti-detection setup
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1366, height: 768 });
+        
+        // Add random delays and mouse movements
+        await page.evaluateOnNewDocument(() => {
+          Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         });
 
+        // Navigate with longer timeout and better wait strategy
+        await page.goto(`https://www.amazon.com/s?k=${encodeURIComponent(query)}`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 45000
+        });
+
+        // Wait for content to load
+        await page.waitForTimeout(2000);
+
         const products = await page.evaluate(() => {
-          const items = Array.from(document.querySelectorAll('[data-component-type="s-search-result"]'));
+          // Try multiple selector strategies
+          const selectors = [
+            '[data-component-type="s-search-result"]',
+            '.s-result-item',
+            '.sg-col-inner .s-card-container',
+            '[data-asin]:not([data-asin=""])'
+          ];
+          
+          let items = [];
+          for (const selector of selectors) {
+            items = Array.from(document.querySelectorAll(selector));
+            if (items.length > 0) break;
+          }
+
           return items.slice(0, 5).map(item => {
-            const titleEl = item.querySelector('h2 a span');
-            const priceEl = item.querySelector('.a-price .a-offscreen');
+            // Try multiple title selectors
+            const titleSelectors = [
+              'h2 a span',
+              '.a-link-normal .a-text-normal',
+              'h2 .a-link-normal',
+              '.s-link-style .a-text-normal'
+            ];
+            
+            let titleEl = null;
+            for (const selector of titleSelectors) {
+              titleEl = item.querySelector(selector);
+              if (titleEl) break;
+            }
+
+            // Try multiple price selectors
+            const priceSelectors = [
+              '.a-price .a-offscreen',
+              '.a-price-whole',
+              '.a-price .a-price-fraction',
+              '.a-price-range .a-offscreen'
+            ];
+            
+            let priceEl = null;
+            for (const selector of priceSelectors) {
+              priceEl = item.querySelector(selector);
+              if (priceEl) break;
+            }
+
             const imageEl = item.querySelector('img');
-            const linkEl = item.querySelector('h2 a');
+            const linkEl = item.querySelector('h2 a') || item.querySelector('.a-link-normal');
 
             return {
               title: titleEl?.textContent?.trim() || '',
@@ -85,7 +135,7 @@ const scrapers = {
               link: linkEl ? `https://www.amazon.com${linkEl.getAttribute('href')}` : '',
               site: 'amazon'
             };
-          }).filter(item => item.title && item.price);
+          }).filter(item => item.title && item.title.length > 0);
         });
 
         logger.info(`Amazon scraper found ${products.length} products for query: ${query}`);

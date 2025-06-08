@@ -4,6 +4,7 @@ FastAPI routes for product analysis and image upload
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import asyncio
 import json
@@ -35,6 +36,11 @@ from app.worker import analyze_image_task, full_product_analysis_task
 from app.services.clip_search import clip_service
 
 router = APIRouter()
+
+# Request models
+class TextSearchRequest(BaseModel):
+    query: str
+    top_k: Optional[int] = 10
 
 @router.post("/analyze")
 async def analyze_product_image(
@@ -325,12 +331,11 @@ async def search_products_by_image(
         file: Image file to search with
         top_k: Number of results to return
         db: Database session
-        
-    Returns:
+          Returns:
         List of similar products with similarity scores
     """
     # Validate file
-    if not file.content_type.startswith('image/'):
+    if not file or not file.content_type or not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="File must be an image")
     
     try:
@@ -397,16 +402,14 @@ async def search_products_by_image(
 
 @router.post("/search-by-text")
 async def search_products_by_text(
-    query: str,
-    top_k: int = 10,
+    request: TextSearchRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Search for products using text query (CLIP-based)
     
     Args:
-        query: Text search query
-        top_k: Number of results to return
+        request: Text search request containing query and top_k
         db: Database session
         
     Returns:
@@ -418,7 +421,7 @@ async def search_products_by_text(
             await clip_service.initialize()
         
         # Perform text search
-        search_results = await clip_service.search_by_text(query, top_k=top_k)
+        search_results = await clip_service.search_by_text(request.query, top_k=request.top_k)
         
         # Enhance results with database information
         enhanced_results = []
@@ -436,19 +439,18 @@ async def search_products_by_text(
                     'category': product.category,
                     'specifications': product.specifications,
                     'similarity_score': result['similarity_score'],
-                    'image_path': result['image_path'],
-                    'detection_confidence': float(product.detection_confidence) if product.detection_confidence else None
+                    'image_path': result['image_path'],                    'detection_confidence': float(product.detection_confidence) if product.detection_confidence else None
                 }
                 enhanced_results.append(enhanced_result)
         
         return {
             'query_type': 'text',
-            'query': query,
+            'query': request.query,
             'results': enhanced_results,
             'total_results': len(enhanced_results),
             'search_metadata': {
                 'model_used': 'CLIP',
-                'top_k': top_k
+                'top_k': request.top_k
             }
         }
         
@@ -485,10 +487,9 @@ async def hybrid_search_products(
     
     temp_file_path = None
     
-    try:
-        # Handle image file if provided
+    try:        # Handle image file if provided
         if file:
-            if not file.content_type.startswith('image/'):
+            if not file.content_type or not file.content_type.startswith('image/'):
                 raise HTTPException(status_code=400, detail="File must be an image")
             
             # Save uploaded file temporarily

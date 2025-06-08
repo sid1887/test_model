@@ -1,0 +1,1041 @@
+{
+  "text_search": [
+    {
+      "query": "Floral Print Round-Shaped Wall Clock",
+      "status": "success",
+      "response_time": 0.1273634433746338,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 34,
+          "title": "Floral Print Round Wall Clock",
+          "brand": "HomeStyle",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Wood and metal",
+            "size": "12 inches diameter",
+            "color": "White with floral pattern",
+            "style": "Contemporary",
+            "room_type": "Living room, bedroom",
+            "mounting": "Wall mounted",
+            "movement": "Quartz",
+            "warranty": "1 year"
+          },
+          "similarity_score": 0.9486612677574158,
+          "image_path": "uploads/test_wall_clock.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 35,
+          "title": "Loving Swans Wall Painting",
+          "brand": "Decorative Arts",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Canvas and acrylic paint",
+            "size": "24x36 inches",
+            "color": "Blue and white",
+            "style": "Romantic",
+            "frame": "Included",
+            "care": "Dust with soft cloth",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5805602073669434,
+          "image_path": "uploads/test_painting.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5622218251228333,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        }
+      ]
+    },
+    {
+      "query": "Loving Swans Wall Painting with Frame",
+      "status": "success",
+      "response_time": 0.05463409423828125,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 35,
+          "title": "Loving Swans Wall Painting",
+          "brand": "Decorative Arts",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Canvas and acrylic paint",
+            "size": "24x36 inches",
+            "color": "Blue and white",
+            "style": "Romantic",
+            "frame": "Included",
+            "care": "Dust with soft cloth",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.8731499314308167,
+          "image_path": "uploads/test_painting.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5841386318206787,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5833835005760193,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": 0.85
+        }
+      ]
+    },
+    {
+      "query": "Suction Drain Soap Tray",
+      "status": "success",
+      "response_time": 0.052780866622924805,
+      "results_count": 3,
+      "results": [
+        {
+          "product_id": 36,
+          "title": "Suction Drain Soap Tray",
+          "brand": "UtilityPro",
+          "category": "kitchen",
+          "specifications": {
+            "material": "Silicone",
+            "size": "4x3 inches",
+            "color": "White",
+            "mounting": "Suction cups",
+            "waterproof": true,
+            "dishwasher_safe": true,
+            "warranty": "90 days"
+          },
+          "similarity_score": 0.9186622500419617,
+          "image_path": "uploads/test_soap_tray.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.7008572220802307,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6910446882247925,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": 0.85
+        }
+      ]
+    },
+    {
+      "query": "Mini Diary with Pen - Shinchan",
+      "status": "success",
+      "response_time": 0.04759407043457031,
+      "results_count": 3,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6562695503234863,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6422393321990967,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 2,
+          "title": "Product_04167bfd",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5820339322090149,
+          "image_path": "uploads\\04167bfd-bbba-4829-831c-bc2a139bb913.jpg",
+          "detection_confidence": 0.85
+        }
+      ]
+    },
+    {
+      "query": "Iron Man Hand Fan",
+      "status": "success",
+      "response_time": 0.05028700828552246,
+      "results_count": 3,
+      "results": [
+        {
+          "product_id": 37,
+          "title": "Iron Man Hand Fan",
+          "brand": "PopCulture",
+          "category": "electronics",
+          "specifications": {
+            "material": "Plastic and metal",
+            "power": "Battery operated",
+            "battery": "2 AA batteries",
+            "color": "Red and gold",
+            "features": [
+              "LED lights",
+              "Multiple speeds"
+            ],
+            "portable": true,
+            "warranty": "6 months"
+          },
+          "similarity_score": 0.928924560546875,
+          "image_path": "uploads/test_fan.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5552398562431335,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5406940579414368,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": 0.85
+        }
+      ]
+    },
+    {
+      "query": "Peacock Dance 3-Piece Vinyl Wall Painting",
+      "status": "success",
+      "response_time": 0.05168485641479492,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 35,
+          "title": "Loving Swans Wall Painting",
+          "brand": "Decorative Arts",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Canvas and acrylic paint",
+            "size": "24x36 inches",
+            "color": "Blue and white",
+            "style": "Romantic",
+            "frame": "Included",
+            "care": "Dust with soft cloth",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.614990234375,
+          "image_path": "uploads/test_painting.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 34,
+          "title": "Floral Print Round Wall Clock",
+          "brand": "HomeStyle",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Wood and metal",
+            "size": "12 inches diameter",
+            "color": "White with floral pattern",
+            "style": "Contemporary",
+            "room_type": "Living room, bedroom",
+            "mounting": "Wall mounted",
+            "movement": "Quartz",
+            "warranty": "1 year"
+          },
+          "similarity_score": 0.4944406747817993,
+          "image_path": "uploads/test_wall_clock.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.46202552318573,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        }
+      ]
+    },
+    {
+      "query": "Heavy-Duty Retractable Utility Knife",
+      "status": "success",
+      "response_time": 0.06564950942993164,
+      "results_count": 3,
+      "results": [
+        {
+          "product_id": 38,
+          "title": "Heavy-Duty Retractable Utility Knife",
+          "brand": "UtilityPro",
+          "category": "accessories",
+          "specifications": {
+            "material": "Steel and plastic",
+            "blade": "Retractable steel blade",
+            "safety": "Lock mechanism",
+            "grip": "Non-slip handle",
+            "uses": [
+              "Crafting",
+              "Box cutting",
+              "General utility"
+            ],
+            "warranty": "1 year"
+          },
+          "similarity_score": 0.9224421977996826,
+          "image_path": "uploads/test_knife.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6881914734840393,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6803159713745117,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": 0.85
+        }
+      ]
+    },
+    {
+      "query": "Cute Ghost Silicone Night Light",
+      "status": "success",
+      "response_time": 0.04288840293884277,
+      "results_count": 2,
+      "results": [
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6480647325515747,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6442312002182007,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        }
+      ]
+    },
+    {
+      "query": "Trash Bin Lamp cum Pen Holder",
+      "status": "success",
+      "response_time": 0.06802701950073242,
+      "results_count": 3,
+      "results": [
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6980676054954529,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6965256929397583,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 2,
+          "title": "Product_04167bfd",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6566137075424194,
+          "image_path": "uploads\\04167bfd-bbba-4829-831c-bc2a139bb913.jpg",
+          "detection_confidence": 0.85
+        }
+      ]
+    },
+    {
+      "query": "Harry Potter Metal Keychain",
+      "status": "success",
+      "response_time": 0.04520606994628906,
+      "results_count": 3,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5636668801307678,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5557083487510681,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 38,
+          "title": "Heavy-Duty Retractable Utility Knife",
+          "brand": "UtilityPro",
+          "category": "accessories",
+          "specifications": {
+            "material": "Steel and plastic",
+            "blade": "Retractable steel blade",
+            "safety": "Lock mechanism",
+            "grip": "Non-slip handle",
+            "uses": [
+              "Crafting",
+              "Box cutting",
+              "General utility"
+            ],
+            "warranty": "1 year"
+          },
+          "similarity_score": 0.5451616048812866,
+          "image_path": "uploads/test_knife.jpg",
+          "detection_confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "image_search": [
+    {
+      "image": "download (1).jpg",
+      "status": "success",
+      "response_time": 0.6392879486083984,
+      "analysis": {
+        "message": "Image uploaded successfully",
+        "product_id": 39,
+        "task_id": "75af46ea-c312-4c94-870b-189ea0a6b1ff",
+        "status": "processing",
+        "full_analysis": true,
+        "estimated_time": "2-5 minutes"
+      }
+    },
+    {
+      "image": "download (10).jpg",
+      "status": "success",
+      "response_time": 0.08528542518615723,
+      "analysis": {
+        "message": "Image uploaded successfully",
+        "product_id": 40,
+        "task_id": "473f2a38-6e86-4bb4-9214-c31467075a30",
+        "status": "processing",
+        "full_analysis": true,
+        "estimated_time": "2-5 minutes"
+      }
+    },
+    {
+      "image": "download (11).jpg",
+      "status": "success",
+      "response_time": 0.06867122650146484,
+      "analysis": {
+        "message": "Image uploaded successfully",
+        "product_id": 41,
+        "task_id": "4ad0c65c-a1f4-49d0-b372-ec17feac88f0",
+        "status": "processing",
+        "full_analysis": true,
+        "estimated_time": "2-5 minutes"
+      }
+    },
+    {
+      "image": "download (2).jpg",
+      "status": "success",
+      "response_time": 0.08738398551940918,
+      "analysis": {
+        "message": "Image uploaded successfully",
+        "product_id": 42,
+        "task_id": "a1b67a49-168b-436a-a66a-bc932f7b34d0",
+        "status": "processing",
+        "full_analysis": true,
+        "estimated_time": "2-5 minutes"
+      }
+    },
+    {
+      "image": "download (3).jpg",
+      "status": "success",
+      "response_time": 0.07846570014953613,
+      "analysis": {
+        "message": "Image uploaded successfully",
+        "product_id": 43,
+        "task_id": "842314d5-0a0d-41a6-99c7-dd53d28bc546",
+        "status": "processing",
+        "full_analysis": true,
+        "estimated_time": "2-5 minutes"
+      }
+    }
+  ],
+  "clip_search": [
+    {
+      "image": "download (1).jpg",
+      "status": "success",
+      "response_time": 0.0783076286315918,
+      "results_count": 7,
+      "results": [
+        {
+          "product_id": 34,
+          "title": "Floral Print Round Wall Clock",
+          "brand": "HomeStyle",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Wood and metal",
+            "size": "12 inches diameter",
+            "color": "White with floral pattern",
+            "style": "Contemporary",
+            "room_type": "Living room, bedroom",
+            "mounting": "Wall mounted",
+            "movement": "Quartz",
+            "warranty": "1 year"
+          },
+          "similarity_score": 1.000000238418579,
+          "image_path": "uploads/test_wall_clock.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 1,
+          "title": "Product_9d4a3a1b",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 1.000000238418579,
+          "image_path": "uploads\\9d4a3a1b-2a4a-431f-80c1-17e05f34e14c.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 38,
+          "title": "Heavy-Duty Retractable Utility Knife",
+          "brand": "UtilityPro",
+          "category": "accessories",
+          "specifications": {
+            "material": "Steel and plastic",
+            "blade": "Retractable steel blade",
+            "safety": "Lock mechanism",
+            "grip": "Non-slip handle",
+            "uses": [
+              "Crafting",
+              "Box cutting",
+              "General utility"
+            ],
+            "warranty": "1 year"
+          },
+          "similarity_score": 0.6382204294204712,
+          "image_path": "uploads/test_knife.jpg",
+          "detection_confidence": 0.9
+        }
+      ]
+    },
+    {
+      "image": "download (10).jpg",
+      "status": "success",
+      "response_time": 0.2096114158630371,
+      "results_count": 6,
+      "results": [
+        {
+          "product_id": 35,
+          "title": "Loving Swans Wall Painting",
+          "brand": "Decorative Arts",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Canvas and acrylic paint",
+            "size": "24x36 inches",
+            "color": "Blue and white",
+            "style": "Romantic",
+            "frame": "Included",
+            "care": "Dust with soft cloth",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.9999998807907104,
+          "image_path": "uploads/test_painting.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 2,
+          "title": "Product_04167bfd",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.9999998807907104,
+          "image_path": "uploads\\04167bfd-bbba-4829-831c-bc2a139bb913.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 36,
+          "title": "Suction Drain Soap Tray",
+          "brand": "UtilityPro",
+          "category": "kitchen",
+          "specifications": {
+            "material": "Silicone",
+            "size": "4x3 inches",
+            "color": "White",
+            "mounting": "Suction cups",
+            "waterproof": true,
+            "dishwasher_safe": true,
+            "warranty": "90 days"
+          },
+          "similarity_score": 0.6524752378463745,
+          "image_path": "uploads/test_soap_tray.jpg",
+          "detection_confidence": 0.9
+        }
+      ]
+    },
+    {
+      "image": "download (11).jpg",
+      "status": "success",
+      "response_time": 0.07548332214355469,
+      "results_count": 6,
+      "results": [
+        {
+          "product_id": 36,
+          "title": "Suction Drain Soap Tray",
+          "brand": "UtilityPro",
+          "category": "kitchen",
+          "specifications": {
+            "material": "Silicone",
+            "size": "4x3 inches",
+            "color": "White",
+            "mounting": "Suction cups",
+            "waterproof": true,
+            "dishwasher_safe": true,
+            "warranty": "90 days"
+          },
+          "similarity_score": 0.9999999403953552,
+          "image_path": "uploads/test_soap_tray.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 3,
+          "title": "Product_8a557edd",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.9999999403953552,
+          "image_path": "uploads\\8a557edd-677b-4096-a9d2-6c34f18cc40e.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 35,
+          "title": "Loving Swans Wall Painting",
+          "brand": "Decorative Arts",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Canvas and acrylic paint",
+            "size": "24x36 inches",
+            "color": "Blue and white",
+            "style": "Romantic",
+            "frame": "Included",
+            "care": "Dust with soft cloth",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.6524752378463745,
+          "image_path": "uploads/test_painting.jpg",
+          "detection_confidence": 0.9
+        }
+      ]
+    },
+    {
+      "image": "download (2).jpg",
+      "status": "success",
+      "response_time": 0.09339261054992676,
+      "results_count": 6,
+      "results": [
+        {
+          "product_id": 37,
+          "title": "Iron Man Hand Fan",
+          "brand": "PopCulture",
+          "category": "electronics",
+          "specifications": {
+            "material": "Plastic and metal",
+            "power": "Battery operated",
+            "battery": "2 AA batteries",
+            "color": "Red and gold",
+            "features": [
+              "LED lights",
+              "Multiple speeds"
+            ],
+            "portable": true,
+            "warranty": "6 months"
+          },
+          "similarity_score": 1.0000001192092896,
+          "image_path": "uploads/test_fan.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 1.0000001192092896,
+          "image_path": "uploads\\d6fe3a37-0ca8-4217-8c19-385b64351959.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 38,
+          "title": "Heavy-Duty Retractable Utility Knife",
+          "brand": "UtilityPro",
+          "category": "accessories",
+          "specifications": {
+            "material": "Steel and plastic",
+            "blade": "Retractable steel blade",
+            "safety": "Lock mechanism",
+            "grip": "Non-slip handle",
+            "uses": [
+              "Crafting",
+              "Box cutting",
+              "General utility"
+            ],
+            "warranty": "1 year"
+          },
+          "similarity_score": 0.6668283939361572,
+          "image_path": "uploads/test_knife.jpg",
+          "detection_confidence": 0.9
+        }
+      ]
+    },
+    {
+      "image": "download (3).jpg",
+      "status": "success",
+      "response_time": 0.07259178161621094,
+      "results_count": 6,
+      "results": [
+        {
+          "product_id": 38,
+          "title": "Heavy-Duty Retractable Utility Knife",
+          "brand": "UtilityPro",
+          "category": "accessories",
+          "specifications": {
+            "material": "Steel and plastic",
+            "blade": "Retractable steel blade",
+            "safety": "Lock mechanism",
+            "grip": "Non-slip handle",
+            "uses": [
+              "Crafting",
+              "Box cutting",
+              "General utility"
+            ],
+            "warranty": "1 year"
+          },
+          "similarity_score": 1.0,
+          "image_path": "uploads/test_knife.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 1.0,
+          "image_path": "uploads\\2a123d1c-176d-4312-ac78-03753c630891.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 37,
+          "title": "Iron Man Hand Fan",
+          "brand": "PopCulture",
+          "category": "electronics",
+          "specifications": {
+            "material": "Plastic and metal",
+            "power": "Battery operated",
+            "battery": "2 AA batteries",
+            "color": "Red and gold",
+            "features": [
+              "LED lights",
+              "Multiple speeds"
+            ],
+            "portable": true,
+            "warranty": "6 months"
+          },
+          "similarity_score": 0.6668283939361572,
+          "image_path": "uploads/test_fan.jpg",
+          "detection_confidence": 0.9
+        }
+      ]
+    }
+  ],
+  "web_scraping": [
+    {
+      "query": "Floral Print Round-Shaped Wall Clock",
+      "status": "error",
+      "response_time": 0.10910201072692871,
+      "error": "HTTP 422"
+    },
+    {
+      "query": "Loving Swans Wall Painting with Frame",
+      "status": "error",
+      "response_time": 0.0019989013671875,
+      "error": "HTTP 422"
+    },
+    {
+      "query": "Suction Drain Soap Tray",
+      "status": "error",
+      "response_time": 0.0030014514923095703,
+      "error": "HTTP 422"
+    }
+  ],
+  "performance_metrics": {
+    "text_search": {
+      "success_rate": "100.0%",
+      "avg_response_time": "0.06s",
+      "total_tests": 10,
+      "successful": 10
+    },
+    "image_analysis": {
+      "success_rate": "100.0%",
+      "avg_response_time": "0.19s",
+      "total_tests": 5,
+      "successful": 5
+    },
+    "clip_search": {
+      "success_rate": "100.0%",
+      "avg_response_time": "0.11s",
+      "total_tests": 5,
+      "successful": 5
+    },
+    "web_scraping": {
+      "success_rate": "0.0%",
+      "avg_response_time": "0.04s",
+      "total_tests": 3,
+      "successful": 0
+    }
+  },
+  "summary": {
+    "overall_success_rate": "87.0%",
+    "total_tests": 23,
+    "total_successful": 20,
+    "products_tested": 100,
+    "images_tested": 23,
+    "test_timestamp": "2025-06-07 19:51:46"
+  }
+}

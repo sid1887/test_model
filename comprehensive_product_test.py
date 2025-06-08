@@ -53,8 +53,7 @@ class CumpairTestFramework:
         if not image_folder.exists():
             print(f"❌ Image folder not found: {image_folder}")
             return images
-            
-        for image_file in image_folder.glob('*'):
+              for image_file in image_folder.glob('*'):
             if image_file.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp']:
                 try:
                     # Get image info
@@ -65,7 +64,8 @@ class CumpairTestFramework:
                             'size': img.size,
                             'format': img.format,
                             'mode': img.mode
-                        })                except Exception as e:
+                        })
+                except Exception as e:
                     print(f"⚠️ Error loading image {image_file}: {e}")
         
         return images
@@ -91,10 +91,10 @@ class CumpairTestFramework:
             print(f"  [{i+1}/{limit}] Testing: '{product_name}'")
             start_time = time.time()
             
-            try:                # Test general search endpoint
-                response = requests.get(
-                    f"{self.base_url}/api/v1/search",
-                    params={"query": product_name, "limit": 5},
+            try:                # Test text search endpoint
+                response = requests.post(
+                    f"{self.base_url}/api/v1/search-by-text",
+                    json={"query": product_name, "top_k": 5},
                     timeout=10
                 )
                 
@@ -141,9 +141,8 @@ class CumpairTestFramework:
             try:                # Test image upload and analysis
                 with open(image_info['path'], 'rb') as img_file:
                     files = {'file': (image_info['filename'], img_file, 'image/jpeg')}
-                    
-                    response = requests.post(
-                        f"{self.base_url}/api/v1/analysis/upload-and-analyze",
+                      response = requests.post(
+                        f"{self.base_url}/api/v1/analyze",
                         files=files,
                         timeout=30
                     )

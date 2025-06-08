@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import Optional, List
+from pydantic import BaseModel, Field
 import asyncio
 import httpx
 import json
@@ -17,6 +18,11 @@ from app.services.price_comparison import price_comparison_service
 from app.worker import scrape_prices_task
 
 router = APIRouter()
+
+class RealTimeSearchRequest(BaseModel):
+    """Request model for real-time price search"""
+    query: str = Field(..., description="Product search query")
+    sites: Optional[List[str]] = Field(default=["amazon", "walmart", "ebay"], description="List of sites to search")
 
 @router.get("/compare/{product_id}")
 async def get_price_comparison(
@@ -329,16 +335,14 @@ async def delete_price_comparisons(
 
 @router.post("/real-time-search")
 async def real_time_price_search(
-    query: str,
-    sites: Optional[List[str]] = Query(default=["amazon", "walmart", "ebay"]),
+    request: RealTimeSearchRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Perform real-time price search across multiple e-commerce sites
     
     Args:
-        query: Product search query
-        sites: List of sites to search (amazon, walmart, ebay, target, bestbuy)
+        request: Search request containing query and sites list
         db: Database session
         
     Returns:
@@ -351,7 +355,7 @@ async def real_time_price_search(
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
                 scraper_url,
-                json={"query": query, "sites": sites}
+                json={"query": request.query, "sites": request.sites}
             )
             
             if response.status_code != 200:
@@ -389,8 +393,7 @@ async def real_time_price_search(
         # Sort by price (cheapest first)
         valid_results = [r for r in processed_results if r['price_numeric'] is not None]
         valid_results.sort(key=lambda x: x['price_numeric'])
-        
-        # Calculate price statistics
+          # Calculate price statistics
         prices = [r['price_numeric'] for r in valid_results]
         price_stats = {}
         if prices:
@@ -403,12 +406,12 @@ async def real_time_price_search(
             }
         
         return {
-            'query': query,
+            'query': request.query,
             'results': processed_results,
             'valid_results': valid_results,
             'price_statistics': price_stats,
             'metadata': {
-                'sites_searched': sites,
+                'sites_searched': request.sites,
                 'total_results': len(processed_results),
                 'valid_price_results': len(valid_results),
                 'search_timestamp': scraper_data.get('metadata', {}).get('timestamp'),

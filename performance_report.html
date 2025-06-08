@@ -1,0 +1,263 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Cumpair System Performance Report</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { background: #2c3e50; color: white; padding: 20px; border-radius: 5px; }
+                .metric-card { 
+                    border: 1px solid #ddd; margin: 10px; padding: 15px; 
+                    border-radius: 5px; display: inline-block; min-width: 200px; 
+                }
+                .success { background: #d4edda; border-color: #c3e6cb; }
+                .warning { background: #fff3cd; border-color: #ffeaa7; }
+                .error { background: #f8d7da; border-color: #f5c6cb; }
+                .table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+                .table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                .table th { background: #f2f2f2; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🎯 Cumpair System Performance Report</h1>
+                <p>Generated: 2025-06-07 20:13:50</p>
+                <p>Test Duration: 11.97s</p>
+            </div>
+            
+            <h2>📊 Overall Statistics</h2>
+            <div class="metric-card success">
+                <h3>Overall Success Rate</h3>
+                <p style="font-size: 24px; margin: 0;">95.7%</p>
+            </div>
+            
+            <div class="metric-card">
+                <h3>Total Tests</h3>
+                <p style="font-size: 24px; margin: 0;">23</p>
+            </div>
+            
+            <div class="metric-card">
+                <h3>Products Tested</h3>
+                <p style="font-size: 24px; margin: 0;">100</p>
+            </div>
+            
+            <div class="metric-card">
+                <h3>Images Tested</h3>
+                <p style="font-size: 24px; margin: 0;">23</p>
+            </div>
+            
+            <h2>📋 Component Performance</h2>
+            <table class="table">
+                <tr>
+                    <th>Component</th>
+                    <th>Success Rate</th>
+                    <th>Avg Response Time</th>
+                    <th>Tests Run</th>
+                    <th>Status</th>
+                </tr>
+        
+                <tr class="success">
+                    <td>Text Search</td>
+                    <td>100.0%</td>
+                    <td>0.05s</td>
+                    <td>10/10</td>
+                    <td>✅ Good</td>
+                </tr>
+            
+                <tr class="success">
+                    <td>Image Analysis</td>
+                    <td>100.0%</td>
+                    <td>0.10s</td>
+                    <td>5/5</td>
+                    <td>✅ Good</td>
+                </tr>
+            
+                <tr class="success">
+                    <td>Clip Search</td>
+                    <td>100.0%</td>
+                    <td>0.10s</td>
+                    <td>5/5</td>
+                    <td>✅ Good</td>
+                </tr>
+            
+                <tr class="warning">
+                    <td>Web Scraping</td>
+                    <td>66.7%</td>
+                    <td>2.79s</td>
+                    <td>2/3</td>
+                    <td>⚠️ Issues</td>
+                </tr>
+            
+            </table>
+            
+            <h2>🔍 Test Details</h2>
+            <details>
+                <summary>Click to view detailed test results</summary>
+                <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto;">
+        {
+  "text_search": [
+    {
+      "query": "Floral Print Round-Shaped Wall Clock",
+      "status": "success",
+      "response_time": 0.07804536819458008,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 34,
+          "title": "Floral Print Round Wall Clock",
+          "brand": "HomeStyle",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Wood and metal",
+            "size": "12 inches diameter",
+            "color": "White with floral pattern",
+            "style": "Contemporary",
+            "room_type": "Living room, bedroom",
+            "mounting": "Wall mounted",
+            "movement": "Quartz",
+            "warranty": "1 year"
+          },
+          "similarity_score": 0.9486612677574158,
+          "image_path": "uploads/test_wall_clock.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 35,
+          "title": "Loving Swans Wall Painting",
+          "brand": "Decorative Arts",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Canvas and acrylic paint",
+            "size": "24x36 inches",
+            "color": "Blue and white",
+            "style": "Romantic",
+            "frame": "Included",
+            "care": "Dust with soft cloth",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5805602073669434,
+          "image_path": "uploads/test_painting.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5622218251228333,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        }
+      ],
+      "has_prices": false,
+      "has_images": true
+    },
+    {
+      "query": "Loving Swans Wall Painting with Frame",
+      "status": "success",
+      "response_time": 0.048958539962768555,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 35,
+          "title": "Loving Swans Wall Painting",
+          "brand": "Decorative Arts",
+          "category": "home_decor",
+          "specifications": {
+            "material": "Canvas and acrylic paint",
+            "size": "24x36 inches",
+            "color": "Blue and white",
+            "style": "Romantic",
+            "frame": "Included",
+            "care": "Dust with soft cloth",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.8731499314308167,
+          "image_path": "uploads/test_painting.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5841386318206787,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": 0.85
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": "Generic",
+          "category": "general",
+          "specifications": {
+            "material": "Mixed materials",
+            "size": "Standard",
+            "color": "Multi-color",
+            "weight": "Light",
+            "origin": "Global",
+            "warranty": "30 days"
+          },
+          "similarity_score": 0.5833835005760193,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": 0.85
+        }
+      ],
+      "has_prices": false,
+      "has_images": true
+    },
+    {
+      "query": "Suction Drain Soap Tray",
+      "status": "success",
+      "response_time": 0.046567678451538086,
+      "results_count": 3,
+      "results": [
+        {
+          "product_id": 36,
+          "title": "Suction Drain Soap Tray",
+          "brand": "UtilityPro",
+          "category": "kitchen",
+          "specifications": {
+            "material": "Silicone",
+            "size": "4x3 inches",
+            "color": "White",
+            "mounting": "Suction cups",
+            "waterproof": true,
+            "dishwasher_safe": true,
+            "warranty": "90 days"
+          },
+          "similarity_score": 0.9186622500419617,
+          "image_path": "uploads/test_soap_tray.jpg",
+          "detection_confidence": 0.9
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": "Ge
+... (truncated for display)
+                </pre>
+            </details>
+            
+            <footer style="margin-top: 50px; padding: 20px; background: #f8f9fa; border-radius: 5px;">
+                <p><strong>Cumpair Testing Framework</strong> - Comprehensive system testing and performance monitoring</p>
+                <p>For issues or questions, please check the system logs and API documentation.</p>
+            </footer>
+        </body>
+        </html>
+        

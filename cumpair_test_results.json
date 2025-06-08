@@ -2,135 +2,439 @@
   "text_search": [
     {
       "query": "Floral Print Round-Shaped Wall Clock",
-      "status": "error",
-      "error": "HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=10)"
+      "status": "success",
+      "response_time": 2.701167106628418,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5622218251228333,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5622218251228333,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5573556423187256,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        }
+      ]
     },
     {
       "query": "Loving Swans Wall Painting with Frame",
-      "status": "error",
-      "error": "HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=10)"
+      "status": "success",
+      "response_time": 2.1213645935058594,
+      "results_count": 5,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5841386318206787,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5841386318206787,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5833835005760193,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        }
+      ]
     },
     {
       "query": "Suction Drain Soap Tray",
       "status": "success",
-      "response_time": 5.830148935317993,
-      "results_count": 0,
-      "results": []
+      "response_time": 2.136857271194458,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.7008572220802307,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.7008572220802307,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6910446882247925,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        }
+      ]
     },
     {
       "query": "Mini Diary with Pen - Shinchan",
       "status": "success",
-      "response_time": 2.12021541595459,
-      "results_count": 0,
-      "results": []
+      "response_time": 2.1457674503326416,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6562695503234863,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6562695503234863,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6422393321990967,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        }
+      ]
     },
     {
       "query": "Iron Man Hand Fan",
       "status": "success",
-      "response_time": 2.1401755809783936,
-      "results_count": 0,
-      "results": []
+      "response_time": 2.1131227016448975,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5552398562431335,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5552398562431335,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5406940579414368,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        }
+      ]
     },
     {
       "query": "Peacock Dance 3-Piece Vinyl Wall Painting",
       "status": "success",
-      "response_time": 2.1048247814178467,
-      "results_count": 0,
-      "results": []
+      "response_time": 2.1191065311431885,
+      "results_count": 5,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.46202552318573,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.46202552318573,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 1,
+          "title": "Product_9d4a3a1b",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.4605473279953003,
+          "image_path": "uploads\\9d4a3a1b-2a4a-431f-80c1-17e05f34e14c.jpg",
+          "detection_confidence": null
+        }
+      ]
     },
     {
       "query": "Heavy-Duty Retractable Utility Knife",
       "status": "success",
-      "response_time": 2.131218910217285,
-      "results_count": 0,
-      "results": []
+      "response_time": 2.1131234169006348,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6881914734840393,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6881914734840393,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6803159713745117,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        }
+      ]
     },
     {
       "query": "Cute Ghost Silicone Night Light",
       "status": "success",
-      "response_time": 2.1121537685394287,
-      "results_count": 0,
-      "results": []
+      "response_time": 2.111696243286133,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6480647325515747,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6480647325515747,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6442312002182007,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        }
+      ]
     },
     {
       "query": "Trash Bin Lamp cum Pen Holder",
       "status": "success",
-      "response_time": 2.1156787872314453,
-      "results_count": 0,
-      "results": []
+      "response_time": 2.0991690158843994,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6980676054954529,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6980676054954529,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.6965256929397583,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        }
+      ]
     },
     {
       "query": "Harry Potter Metal Keychain",
       "status": "success",
-      "response_time": 2.1139256954193115,
-      "results_count": 0,
-      "results": []
+      "response_time": 2.1105833053588867,
+      "results_count": 4,
+      "results": [
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5636668801307678,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 4,
+          "title": "Product_d6fe3a37",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5636668801307678,
+          "image_path": "uploads\\861b36dc-c225-4703-8b31-4a3f8daa940c.jpg",
+          "detection_confidence": null
+        },
+        {
+          "product_id": 5,
+          "title": "Product_2a123d1c",
+          "brand": null,
+          "category": null,
+          "specifications": null,
+          "similarity_score": 0.5557083487510681,
+          "image_path": "uploads\\33e249d8-35e0-4835-b33d-6afdf6042ebc.jpg",
+          "detection_confidence": null
+        }
+      ]
     }
   ],
   "image_search": [
     {
       "image": "download (1).jpg",
       "status": "success",
-      "response_time": 2.3218166828155518,
+      "response_time": 2.197671890258789,
       "analysis": {
-        "status": "uploaded",
-        "message": "Image uploaded successfully, analysis started",
+        "status": "duplicate",
+        "message": "Image already analyzed",
         "product_id": 1,
-        "file_path": "uploads\\9d4a3a1b-2a4a-431f-80c1-17e05f34e14c.jpg",
-        "image_hash": "c84bc4d779404a5768257ffe1e8806c9",
-        "estimated_processing_time": "30-60 seconds"
+        "file_path": "uploads\\5b88b312-1cf4-4cc6-9260-0f1631b8208b.jpg"
       }
     },
     {
       "image": "download (10).jpg",
       "status": "success",
-      "response_time": 5.976971864700317,
+      "response_time": 2.100029230117798,
       "analysis": {
-        "status": "uploaded",
-        "message": "Image uploaded successfully, analysis started",
+        "status": "duplicate",
+        "message": "Image already analyzed",
         "product_id": 2,
-        "file_path": "uploads\\04167bfd-bbba-4829-831c-bc2a139bb913.jpg",
-        "image_hash": "c56d53f6a5acde25006604b6b71f55fb",
-        "estimated_processing_time": "30-60 seconds"
+        "file_path": "uploads\\feba72ce-7ceb-4ae1-81ff-ec8e77da28b3.jpg"
       }
     },
     {
       "image": "download (11).jpg",
       "status": "success",
-      "response_time": 2.117758274078369,
+      "response_time": 2.0626330375671387,
       "analysis": {
-        "status": "uploaded",
-        "message": "Image uploaded successfully, analysis started",
+        "status": "duplicate",
+        "message": "Image already analyzed",
         "product_id": 3,
-        "file_path": "uploads\\8a557edd-677b-4096-a9d2-6c34f18cc40e.jpg",
-        "image_hash": "df3b2f9d95b2f458b80c477a2fc6fd9b",
-        "estimated_processing_time": "30-60 seconds"
+        "file_path": "uploads\\5db709b0-5cdc-4526-92a5-c11a8e983ee8.jpg"
       }
     },
     {
       "image": "download (2).jpg",
       "status": "success",
-      "response_time": 2.1152353286743164,
+      "response_time": 2.097235679626465,
       "analysis": {
-        "status": "uploaded",
-        "message": "Image uploaded successfully, analysis started",
+        "status": "duplicate",
+        "message": "Image already analyzed",
         "product_id": 4,
-        "file_path": "uploads\\d6fe3a37-0ca8-4217-8c19-385b64351959.jpg",
-        "image_hash": "ff4edfd8cfa01f5be938f5b412f66880",
-        "estimated_processing_time": "30-60 seconds"
+        "file_path": "uploads\\f147b7a7-e33f-41c9-ab95-04768027eb01.jpg"
       }
     },
     {
       "image": "download (3).jpg",
       "status": "success",
-      "response_time": 2.118858814239502,
+      "response_time": 2.0673768520355225,
       "analysis": {
-        "status": "uploaded",
-        "message": "Image uploaded successfully, analysis started",
+        "status": "duplicate",
+        "message": "Image already analyzed",
         "product_id": 5,
-        "file_path": "uploads\\2a123d1c-176d-4312-ac78-03753c630891.jpg",
-        "image_hash": "4a16e1b5d0c6c5f3dafd4a5378a94392",
-        "estimated_processing_time": "30-60 seconds"
+        "file_path": "uploads\\6fc96cb3-bf2a-45d6-a083-7123d61c3b0e.jpg"
       }
     }
   ],
@@ -138,7 +442,7 @@
     {
       "image": "download (1).jpg",
       "status": "success",
-      "response_time": 2.109128952026367,
+      "response_time": 2.5251893997192383,
       "matches": 9,
       "results": [
         {
@@ -236,7 +540,7 @@
     {
       "image": "download (10).jpg",
       "status": "success",
-      "response_time": 2.167463541030884,
+      "response_time": 2.1456234455108643,
       "matches": 8,
       "results": [
         {
@@ -324,7 +628,7 @@
     {
       "image": "download (11).jpg",
       "status": "success",
-      "response_time": 2.1731951236724854,
+      "response_time": 2.1151833534240723,
       "matches": 8,
       "results": [
         {
@@ -412,7 +716,7 @@
     {
       "image": "download (2).jpg",
       "status": "success",
-      "response_time": 2.1513125896453857,
+      "response_time": 2.1756062507629395,
       "matches": 9,
       "results": [
         {
@@ -510,7 +814,7 @@
     {
       "image": "download (3).jpg",
       "status": "success",
-      "response_time": 2.1753177642822266,
+      "response_time": 2.18137264251709,
       "matches": 8,
       "results": [
         {
@@ -600,58 +904,58 @@
     {
       "query": "Floral Print Round-Shaped Wall Clock",
       "status": "error",
-      "response_time": 4.615628719329834,
+      "response_time": 4.613097429275513,
       "error": "HTTP 503"
     },
     {
       "query": "Loving Swans Wall Painting with Frame",
       "status": "error",
-      "response_time": 4.631553649902344,
+      "response_time": 4.624639272689819,
       "error": "HTTP 503"
     },
     {
       "query": "Suction Drain Soap Tray",
       "status": "error",
-      "response_time": 4.599477529525757,
+      "response_time": 4.587036848068237,
       "error": "HTTP 503"
     },
     {
       "query": "Mini Diary with Pen - Shinchan",
       "status": "error",
-      "response_time": 4.593472480773926,
+      "response_time": 4.611872673034668,
       "error": "HTTP 503"
     },
     {
       "query": "Iron Man Hand Fan",
       "status": "error",
-      "response_time": 4.602147102355957,
+      "response_time": 4.591963291168213,
       "error": "HTTP 503"
     }
   ],
   "performance_metrics": {
     "text_search": {
       "total_tests": 10,
-      "successful": 8,
-      "success_rate": 80.0,
-      "avg_response_time": 2.5835427343845367,
-      "min_response_time": 2.1048247814178467,
-      "max_response_time": 5.830148935317993
+      "successful": 10,
+      "success_rate": 100.0,
+      "avg_response_time": 2.1771957635879517,
+      "min_response_time": 2.0991690158843994,
+      "max_response_time": 2.701167106628418
     },
     "image_search": {
       "total_tests": 5,
       "successful": 5,
       "success_rate": 100.0,
-      "avg_response_time": 2.9301281929016114,
-      "min_response_time": 2.1152353286743164,
-      "max_response_time": 5.976971864700317
+      "avg_response_time": 2.1049893379211424,
+      "min_response_time": 2.0626330375671387,
+      "max_response_time": 2.197671890258789
     },
     "clip_search": {
       "total_tests": 5,
       "successful": 5,
       "success_rate": 100.0,
-      "avg_response_time": 2.1552835941314696,
-      "min_response_time": 2.109128952026367,
-      "max_response_time": 2.1753177642822266
+      "avg_response_time": 2.228595018386841,
+      "min_response_time": 2.1151833534240723,
+      "max_response_time": 2.5251893997192383
     },
     "web_scraping": {
       "total_tests": 5,
