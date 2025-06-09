@@ -1,15 +1,19 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, MotionProps } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface BaseCardProps {
   variant?: 'default' | 'glass' | 'neumorphism' | 'gradient';
   hover?: 'lift' | 'glow' | 'scale' | 'none';
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
   rounded?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  children?: React.ReactNode;
+  className?: string;
 }
+
+interface CardProps extends BaseCardProps, Omit<MotionProps, keyof BaseCardProps> {}
 
 const cardVariants = {
   default: 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800',

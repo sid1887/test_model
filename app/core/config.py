@@ -41,9 +41,8 @@ class Settings(BaseSettings):
     efficientnet_model_path: str = "models/spec_extractor.h5"
     clip_model_name: str = "ViT-B/32"
     clip_cache_dir: str = "models/clip_cache"
-    
-    # Scraper Service Configuration
-    scraper_service_url: str = "http://localhost:3001"
+      # Scraper Service Configuration
+    scraper_service_url: str = "http://localhost:3000"
     max_concurrent_requests: int = 100
     download_delay: float = 0.25
     user_agents_file: str = "config/user_agents.txt"

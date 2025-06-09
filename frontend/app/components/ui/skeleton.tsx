@@ -99,17 +99,19 @@ export const SkeletonGroup: React.FC<SkeletonGroupProps> = ({
 
 interface ProductCardSkeletonProps {
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({
   className,
-}) => {
-  return (
+  style,
+}) => {  return (
     <motion.div
       className={cn(
         'p-4 border border-gray-200 dark:border-gray-700 rounded-xl space-y-3',
         className
       )}
+      style={style}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}

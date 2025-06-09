@@ -1,5 +1,0 @@
-Component,Success Rate,Avg Response Time,Total Tests,Successful,Failed
-Text Search,100.0%,0.05s,10,10,0
-Image Analysis,100.0%,0.10s,5,5,0
-Clip Search,100.0%,0.10s,5,5,0
-Web Scraping,66.7%,2.79s,3,2,1

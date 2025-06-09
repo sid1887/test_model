@@ -4,6 +4,7 @@ services:
   # Redis for Celery broker and caching
   redis:
     image: redis:7-alpine
+    profiles: ['core']
     ports:
       - "6379:6379"
     volumes:
@@ -18,6 +19,7 @@ services:
   # PostgreSQL database
   postgres:
     image: postgres:15-alpine
+    profiles: ['core']
     environment:
       POSTGRES_DB: compair
       POSTGRES_USER: compair
@@ -32,6 +34,127 @@ services:
       timeout: 5s
       retries: 3
 
+  # Main FastAPI web application
+  web:
+    build: .
+    profiles: ['core']
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery worker for background tasks
+  worker:
+    build: .
+    profiles: ['worker']
+    command: celery -A app.worker worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - web
+    volumes:
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+      - ./logs:/app/logs
+
+  # Celery Flower monitoring
+  flower:
+    build: .
+    profiles: ['worker']
+    command: celery -A app.worker flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - worker
+    volumes:
+      - ./logs:/app/logs
+
+  # Node.js scraper microservice
+  scraper:
+    build:
+      context: ./scraper
+    profiles: ['scraper']
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - NODE_ENV=production
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./scraper/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Next.js application
+  frontend:
+    build:
+      context: ./frontend
+    profiles: ['frontend']
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://web:8000
+    depends_on:
+      - web
+    volumes:
+      - ./frontend/.next:/app/.next
+
+  # Prometheus monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ['monitor']
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+  # Grafana dashboard
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ['monitor']
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+
 volumes:
   redis_data:
   postgres_data:
+  prometheus_data:
+  grafana_data:

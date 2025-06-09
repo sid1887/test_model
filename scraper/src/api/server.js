@@ -181,9 +181,7 @@ class ScraperAPI {
           timestamp: new Date().toISOString()
         });
       }
-    });
-
-    // Get scraper statistics
+    });    // Get scraper statistics
     this.app.get('/api/stats', (req, res) => {
       try {
         const stats = this.scraper.getStats();
@@ -193,6 +191,100 @@ class ScraperAPI {
         });
       } catch (error) {
         logger.error('Failed to get stats:', error);
+        res.status(500).json({
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Product search endpoint - compatible with FastAPI backend
+    this.app.post('/api/search', async (req, res) => {
+      try {
+        const { query, sites = ['amazon', 'walmart', 'ebay'] } = req.body;
+
+        if (!query) {
+          return res.status(400).json({
+            error: 'Query parameter is required',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        // Generate search URLs for different sites
+        const searchUrls = [];
+        const siteUrlGenerators = {
+          amazon: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`,
+          walmart: (q) => `https://www.walmart.com/search?q=${encodeURIComponent(q)}`,
+          ebay: (q) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}`
+        };
+
+        for (const site of sites) {
+          if (siteUrlGenerators[site]) {
+            searchUrls.push({
+              site,
+              url: siteUrlGenerators[site](query)
+            });
+          }
+        }
+
+        // Scrape all URLs concurrently
+        const scrapingPromises = searchUrls.map(async ({ site, url }) => {
+          try {
+            const result = await this.scraper.scrapeWithRetry(url, {
+              selectors: this.getSelectorsForSite(site),
+              usePuppeteer: true, // Use headless browser for e-commerce sites
+              cache: true
+            });
+
+            if (result.success) {
+              return {
+                site,
+                url,
+                products: this.extractProductsFromData(result.data, site),
+                timestamp: result.timestamp
+              };
+            } else {
+              logger.warn(`Failed to scrape ${site}: ${result.error}`);
+              return { site, url, products: [], error: result.error };
+            }
+          } catch (error) {
+            logger.error(`Error scraping ${site}:`, error);
+            return { site, url, products: [], error: error.message };
+          }
+        });
+
+        const results = await Promise.all(scrapingPromises);
+        
+        // Flatten and format results
+        const allProducts = [];
+        const metadata = {
+          query,
+          sites_searched: sites,
+          successful_sites: 0,
+          failed_sites: 0,
+          timestamp: new Date().toISOString()
+        };
+
+        results.forEach(result => {
+          if (result.products && result.products.length > 0) {
+            allProducts.push(...result.products);
+            metadata.successful_sites++;
+          } else {
+            metadata.failed_sites++;
+          }
+        });
+
+        res.json({
+          query,
+          results: allProducts,
+          metadata: {
+            ...metadata,
+            total_results: allProducts.length
+          }
+        });
+
+      } catch (error) {
+        logger.error('Product search failed:', error);
         res.status(500).json({
           error: error.message,
           timestamp: new Date().toISOString()
@@ -259,16 +351,106 @@ class ScraperAPI {
         message: 'Web Scraper API',
         version: process.env.npm_package_version || '1.0.0',
         documentation: '/api/docs',
-        health: '/health',
-        endpoints: {
+        health: '/health',        endpoints: {
           'POST /api/scrape': 'Scrape a single URL',
           'POST /api/scrape/batch': 'Scrape multiple URLs',
+          'POST /api/search': 'Search products across e-commerce sites',
           'GET /api/stats': 'Get scraper statistics',
           'GET /api/cache/:key': 'Get cached data',
           'DELETE /api/cache': 'Clear cache'
         }
       });
     });
+  }
+
+  // Helper method to get selectors for different e-commerce sites
+  getSelectorsForSite(site) {
+    const selectors = {
+      amazon: {
+        products: '[data-component-type="s-search-result"], .s-result-item',
+        title: 'h2 a span, .a-link-normal .a-text-normal',
+        price: '.a-price .a-offscreen, .a-price-whole',
+        image: 'img',
+        link: 'h2 a, .a-link-normal'
+      },
+      walmart: {
+        products: '[data-automation-id="product-title"]',
+        title: '[data-automation-id="product-title"]',
+        price: '[itemprop="price"]',
+        image: 'img',
+        link: 'a'
+      },
+      ebay: {
+        products: '.s-item',
+        title: '.s-item__title',
+        price: '.s-item__price',
+        image: '.s-item__image img',
+        link: '.s-item__link'
+      }
+    };
+
+    return selectors[site] || {
+      products: '.product, .item',
+      title: 'h1, h2, h3, .title',
+      price: '.price, .cost',
+      image: 'img',
+      link: 'a'
+    };
+  }
+
+  // Helper method to extract products from scraped data
+  extractProductsFromData(data, site) {
+    const products = [];
+    
+    try {
+      // If we have HTML content, parse it with Cheerio
+      if (data.html) {
+        const cheerio = require('cheerio');
+        const $ = cheerio.load(data.html);
+        const selectors = this.getSelectorsForSite(site);
+        
+        $(selectors.products).each((i, element) => {
+          if (i >= 10) return false; // Limit to 10 products per site
+          
+          const $item = $(element);
+          const title = $item.find(selectors.title).first().text().trim();
+          const priceText = $item.find(selectors.price).first().text().trim();
+          const imageUrl = $item.find(selectors.image).first().attr('src') || '';
+          const link = $item.find(selectors.link).first().attr('href') || '';
+          
+          if (title && priceText) {            products.push({
+              title,
+              price: priceText,
+              image: imageUrl,
+              link: this.normalizeUrl(link, site),
+              site,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+      }
+    } catch (error) {
+      logger.error(`Error extracting products for ${site}:`, error);
+    }
+    
+    return products;
+  }
+
+  // Helper method to normalize URLs
+  normalizeUrl(url, site) {
+    if (!url) return '';
+    
+    if (url.startsWith('http')) {
+      return url;
+    }
+    
+    const baseDomains = {
+      amazon: 'https://www.amazon.com',
+      walmart: 'https://www.walmart.com',
+      ebay: 'https://www.ebay.com'
+    };
+      const baseDomain = baseDomains[site] || '';
+    return url.startsWith('/') ? `${baseDomain}${url}` : `${baseDomain}/${url}`;
   }
 
   setupErrorHandling() {

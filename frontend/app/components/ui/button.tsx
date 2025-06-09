@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, MotionProps } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface BaseButtonProps {
   variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'glass' | 'gradient';
   size?: 'sm' | 'md' | 'lg' | 'xl';
   loading?: boolean;
@@ -12,7 +12,13 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   iconPosition?: 'left' | 'right';
   ripple?: boolean;
   glow?: boolean;
+  children?: React.ReactNode;
+  className?: string;
+  disabled?: boolean;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }
+
+interface ButtonProps extends BaseButtonProps, Omit<MotionProps, keyof BaseButtonProps> {}
 
 const buttonVariants = {
   default: 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500',

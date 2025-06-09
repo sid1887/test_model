@@ -344,13 +344,12 @@ async def real_time_price_search(
     Args:
         request: Search request containing query and sites list
         db: Database session
-        
-    Returns:
+          Returns:
         Real-time price comparison results
     """
     try:
         # Call Node.js scraper microservice
-        scraper_url = "http://localhost:3001/scrape"
+        scraper_url = "http://localhost:3000/api/search"
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
@@ -484,13 +483,12 @@ async def smart_price_search(
                 status_code=400, 
                 detail="Either query or product_id must be provided"
             )
-        
-        # Perform searches for all query variations
+          # Perform searches for all query variations
         all_results = []
         for search_query in search_queries:
             try:
                 # Call Node.js scraper
-                scraper_url = "http://localhost:3001/scrape"
+                scraper_url = "http://localhost:3000/api/search"
                 
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     response = await client.post(

@@ -1,0 +1,271 @@
+# Cumpair - AI Product Analysis & Price Comparison System
+# Makefile for easy service management
+
+# Detect the operating system
+ifeq ($(OS),Windows_NT)
+    SHELL := powershell.exe
+    START_SCRIPT := .\scripts\start-all.ps1
+    .SHELLFLAGS := -Command
+else
+    SHELL := /bin/bash
+    START_SCRIPT := ./scripts/start-all.sh
+endif
+
+.PHONY: start stop logs restart status clean build test help
+
+# Default target
+all: help
+
+## Development Commands
+
+start: ## Start all services (core + worker + scraper + frontend)
+ifeq ($(OS),Windows_NT)
+	@Write-Host "Starting all Cumpair services..." -ForegroundColor Green
+else
+	@echo "🚀 Starting all Cumpair services..."
+endif
+	$(START_SCRIPT)
+
+start-minimal: ## Start only core services (PostgreSQL, Redis, FastAPI)
+ifeq ($(OS),Windows_NT)
+	@Write-Host "Starting minimal Cumpair services (core only)..." -ForegroundColor Green
+else
+	@echo "🚀 Starting minimal Cumpair services (core only)..."
+endif
+ifeq ($(OS),Windows_NT)
+	$(START_SCRIPT) -Minimal
+else
+	$(START_SCRIPT) --minimal
+endif
+
+start-core: ## Start core services only (alias for start-minimal)
+	@$(MAKE) start-minimal
+
+start-no-scraper: ## Start all services except scraper
+	@echo "🚀 Starting Cumpair services (no scraper)..."
+ifeq ($(OS),Windows_NT)
+	$(START_SCRIPT) -NoScraper
+else
+	$(START_SCRIPT) --no-scraper
+endif
+
+start-no-monitor: ## Start all services except monitoring
+	@echo "🚀 Starting Cumpair services (no monitoring)..."
+ifeq ($(OS),Windows_NT)
+	$(START_SCRIPT) -NoMonitor
+else
+	$(START_SCRIPT) --no-monitor
+endif
+
+start-full: ## Start all services including monitoring (explicit)
+	@echo "🚀 Starting all Cumpair services with monitoring..."
+ifeq ($(OS),Windows_NT)
+	$(START_SCRIPT) -Full
+else
+	$(START_SCRIPT) --full
+endif
+
+## Service Management
+
+stop: ## Stop all services
+	@echo "🛑 Stopping all services..."
+	docker-compose down
+
+stop-volumes: ## Stop all services and remove volumes (DESTRUCTIVE)
+	@echo "🛑 Stopping all services and removing volumes..."
+	@echo "⚠️  This will delete all data!"
+	docker-compose down -v
+
+restart: stop start ## Restart all services
+
+logs: ## View logs from all services
+	docker-compose logs -f
+
+logs-web: ## View logs from web service only
+	docker-compose logs -f web
+
+logs-worker: ## View logs from worker service only
+	docker-compose logs -f worker
+
+logs-scraper: ## View logs from scraper service only
+	docker-compose logs -f scraper
+
+## Status and Health
+
+status: ## Show status of all services
+	@echo "📊 Service Status:"
+	docker-compose ps
+
+health: ## Check health of all running services
+	@echo "🏥 Health Check:"
+	@echo "PostgreSQL:" && docker exec compair_postgres pg_isready -U compair || echo "❌ Not healthy"
+	@echo "Redis:" && docker exec compair_redis redis-cli ping || echo "❌ Not healthy"
+	@echo "FastAPI:" && curl -s http://localhost:8000/api/v1/health > /dev/null && echo "✅ Healthy" || echo "❌ Not healthy"
+	@echo "Scraper:" && curl -s http://localhost:3000/health > /dev/null && echo "✅ Healthy" || echo "❌ Not healthy"
+
+ps: status ## Alias for status
+
+## Database Operations
+
+db-migrate: ## Run database migrations
+	@echo "🔄 Running database migrations..."
+	docker exec compair_web alembic upgrade head
+
+db-reset: ## Reset database (DESTRUCTIVE - will delete all data)
+	@echo "⚠️  Resetting database - this will delete all data!"
+	docker exec compair_web alembic downgrade base
+	docker exec compair_web alembic upgrade head
+
+db-shell: ## Open database shell
+	docker exec -it compair_postgres psql -U compair -d compair
+
+## Development Utilities
+
+build: ## Build all Docker images
+	@echo "🔨 Building Docker images..."
+	docker-compose build
+
+rebuild: ## Rebuild all Docker images from scratch
+	@echo "🔨 Rebuilding Docker images from scratch..."
+	docker-compose build --no-cache
+
+clean: ## Clean up Docker resources
+	@echo "🧹 Cleaning up Docker resources..."
+	docker system prune -f
+	docker volume prune -f
+
+clean-all: ## Clean up all Docker resources (DESTRUCTIVE)
+	@echo "🧹 Cleaning up all Docker resources..."
+	docker system prune -a -f --volumes
+
+shell-web: ## Open shell in web container
+	docker exec -it compair_web bash
+
+shell-scraper: ## Open shell in scraper container  
+	docker exec -it compair_scraper bash
+
+## Testing
+
+test: ## Run tests
+	@echo "🧪 Running tests..."
+	docker exec compair_web python -m pytest
+
+test-scraper: ## Run scraper tests
+	@echo "🧪 Running scraper tests..."
+	docker exec compair_scraper npm test
+
+test-integration: ## Run integration tests
+	@echo "🧪 Running integration tests..."
+	python integration_test.py
+
+## Quick Actions
+
+quick-start: start-minimal ## Quick start with minimal services
+	@echo "⚡ Quick start completed!"
+
+dev: ## Start development environment
+	@$(MAKE) start-no-monitor
+	@echo "💻 Development environment ready!"
+
+prod: ## Start production environment
+	@$(MAKE) start-full
+	@echo "🚀 Production environment ready!"
+
+demo: ## Start demo environment (core + scraper)
+	@echo "🎬 Starting demo environment..."
+ifeq ($(OS),Windows_NT)
+	$(START_SCRIPT) -NoMonitor -NoFrontend
+else
+	$(START_SCRIPT) --no-monitor --no-frontend
+endif
+
+## Monitoring
+
+monitor-start: ## Start only monitoring services
+	@echo "📊 Starting monitoring services..."
+	docker-compose --profile monitor up -d
+
+flower: ## Open Celery Flower monitoring
+ifeq ($(OS),Windows_NT)
+	start http://localhost:5555
+else
+	open http://localhost:5555 || xdg-open http://localhost:5555
+endif
+
+grafana: ## Open Grafana dashboard
+ifeq ($(OS),Windows_NT)
+	start http://localhost:3002
+else
+	open http://localhost:3002 || xdg-open http://localhost:3002
+endif
+
+web: ## Open main web application
+ifeq ($(OS),Windows_NT)
+	start http://localhost:8000
+else
+	open http://localhost:8000 || xdg-open http://localhost:8000
+endif
+
+## Help
+
+help: ## Show this help message
+ifeq ($(OS),Windows_NT)
+	@Write-Host "Cumpair - AI Product Analysis and Price Comparison System" -ForegroundColor Cyan
+	@Write-Host ""
+	@Write-Host "Available commands:" -ForegroundColor Yellow
+	@Write-Host ""
+	@Write-Host "Command              Description" -ForegroundColor Cyan
+	@Write-Host "start                Start all services (core + worker + scraper + frontend)"
+	@Write-Host "start-minimal        Start only core services (PostgreSQL, Redis, FastAPI)"
+	@Write-Host "start-core           Start core services only (alias for start-minimal)"
+		@Write-Host "start-no-scraper     Start all services except scraper"
+	@Write-Host "start-no-monitor     Start all services except monitoring"
+	@Write-Host "stop                 Stop all services"
+	@Write-Host "restart              Restart all services"
+	@Write-Host "logs                 View service logs"
+	@Write-Host "status               Show service status"
+	@Write-Host "clean                Clean up stopped containers and volumes"
+	@Write-Host "build                Build all Docker images"
+	@Write-Host "test                 Run integration tests"
+	@Write-Host ""
+	@Write-Host "Service URLs (when running):" -ForegroundColor Green
+	@Write-Host "   Main App:     http://localhost:8000"
+	@Write-Host "   API Docs:     http://localhost:8000/docs"
+	@Write-Host "   Scraper:      http://localhost:3000"
+	@Write-Host "   Frontend:     http://localhost:3001"
+	@Write-Host "   Flower:       http://localhost:5555"
+	@Write-Host "   Grafana:      http://localhost:3002"
+	@Write-Host "   Prometheus:   http://localhost:9090"
+	@Write-Host ""
+	@Write-Host "Quick Examples:" -ForegroundColor Blue
+	@Write-Host "   make start              # Start all services"
+	@Write-Host "   make start-minimal      # Start only core services"
+	@Write-Host "   make start-no-scraper   # Start without scraper"
+	@Write-Host "   make stop               # Stop everything"
+	@Write-Host "   make logs               # View all logs"
+	@Write-Host "   make health             # Check service health"
+else
+	@echo "Cumpair - AI Product Analysis and Price Comparison System"
+	@echo ""
+	@echo "Available commands:"
+	@echo ""
+	@awk 'BEGIN {FS = ":.*##"; printf "\033[36m%-20s\033[0m %s\n", "Command", "Description"} /^[a-zA-Z_-]+:.*?##/ { printf "\033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+endif
+	@echo ""
+	@echo "🌐 Service URLs (when running):"
+	@echo "   Main App:     http://localhost:8000"
+	@echo "   API Docs:     http://localhost:8000/docs"
+	@echo "   Scraper:      http://localhost:3000"
+	@echo "   Frontend:     http://localhost:3001"
+	@echo "   Flower:       http://localhost:5555"
+	@echo "   Grafana:      http://localhost:3002"
+	@echo "   Prometheus:   http://localhost:9090"
+	@echo ""
+	@echo "💡 Quick Examples:"
+	@echo "   make start              # Start all services"
+	@echo "   make start-minimal      # Start only core services"
+	@echo "   make start-no-scraper   # Start without scraper"
+	@echo "   make stop               # Stop everything"
+	@echo "   make logs               # View all logs"
+	@echo "   make health             # Check service health"
+endif
