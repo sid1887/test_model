@@ -1,0 +1,77 @@
+# Enhanced Dockerfile with Pre-flight Dependency Check
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libpq-dev \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgl1-mesa-glx \
+    libgtk-3-0 \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libatlas-base-dev \
+    gfortran \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    curl \
+    git \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy pre-flight check script first
+COPY pre_flight_check.py .
+COPY safe_start.py .
+
+# Copy requirements files
+COPY requirements.txt .
+COPY requirements_complete.txt* ./
+
+# Install Python dependencies with pre-flight check
+RUN echo "🔍 Running pre-flight dependency check in Docker..." && \
+    python pre_flight_check.py --docker --quick && \
+    echo "✅ Pre-flight check completed successfully!"
+
+# Install remaining dependencies from requirements
+RUN pip install --no-cache-dir -r requirements.txt || \
+    (echo "⚠️ Some packages failed, trying emergency installation..." && \
+     python pre_flight_check.py --force --docker)
+
+# Install Playwright browsers
+RUN playwright install chromium
+
+# Copy application code
+COPY . .
+
+# Ensure main.py is copied
+COPY main.py /app/main.py
+
+# Create necessary directories
+RUN mkdir -p /uploads /models /app/static /logs
+
+# Set environment variable for Docker mode
+ENV CUMPAIR_DOCKER_MODE=true
+ENV PYTHONPATH=/app
+
+# Health check with pre-flight validation
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD python -c "from pre_flight_check import PreFlightChecker; checker = PreFlightChecker(); checker.safe_import_check('fastapi') and checker.safe_import_check('torch') and checker.safe_import_check('clip')" || exit 1
+
+# Expose port
+EXPOSE 8000
+
+# Use enhanced startup script as default command
+CMD ["python", "safe_start.py", "--quick-check"]

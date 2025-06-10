@@ -1,10 +1,7 @@
-version: '3.8'
-
 services:
   # Redis for Celery broker and caching
   redis:
     image: redis:7-alpine
-    profiles: ['core']
     ports:
       - "6379:6379"
     volumes:
@@ -15,11 +12,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-
   # PostgreSQL database
   postgres:
     image: postgres:15-alpine
-    profiles: ['core']
     environment:
       POSTGRES_DB: compair
       POSTGRES_USER: compair
@@ -33,11 +28,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-
   # Main FastAPI web application
   web:
     build: .
-    profiles: ['core']
     ports:
       - "8000:8000"
     environment:

@@ -1,0 +1,23 @@
+# Docker Compose override for enhanced startup with pre-flight checks
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.enhanced
+    volumes:
+      - ./pre_flight_check.py:/app/pre_flight_check.py
+      - ./safe_start.py:/app/safe_start.py
+      - ./emergency_requirements.txt:/app/emergency_requirements.txt:rw
+      - ./pre_flight_health_report.json:/app/pre_flight_health_report.json:rw
+    environment:
+      - CUMPAIR_PREFLIGHT_ENABLED=true
+      - CUMPAIR_QUICK_CHECK=true
+    healthcheck:
+      test: ["CMD", "python", "-c", "from pre_flight_check import PreFlightChecker; c = PreFlightChecker(); exit(0 if c.safe_import_check('fastapi') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    command: ["python", "safe_start.py", "--quick-check"]

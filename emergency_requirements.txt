@@ -1,0 +1,4 @@
+# Emergency requirements file - packages that failed auto-installation
+# Install manually with: pip install -r emergency_requirements.txt
+
+faiss-cpu
