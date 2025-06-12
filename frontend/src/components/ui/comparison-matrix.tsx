@@ -6,18 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAccessibility } from '@/hooks/useAccessibility';
-
-interface Product {
-  id: string;
-  name: string;
-  price: string;
-  originalPrice?: string;
-  image: string;
-  store: string;
-  valueScore: number;
-  specs: string;
-  priceChange: number;
-}
+import { Product } from '@/types/product';
 
 interface ComparisonMatrixProps {
   products: Product[];
@@ -242,12 +231,10 @@ const ComparisonMatrix: React.FC<ComparisonMatrixProps> = ({
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-            </div>
-
-            <div>
+            </div>            <div>
               <span className="text-sm text-muted-foreground">Key Specs</span>
               <div className="text-sm mt-1 line-clamp-2">
-                {product.specs}
+                {product.specs.join(', ')}
               </div>
             </div>
           </div>
@@ -427,10 +414,9 @@ const ComparisonMatrix: React.FC<ComparisonMatrixProps> = ({
                         </div>
                       </td>
 
-                      {/* Specs */}
-                      <td className="p-4">
+                      {/* Specs */}                      <td className="p-4">
                         <div className="text-sm text-muted-foreground max-w-48 line-clamp-2">
-                          {product.specs}
+                          {product.specs.join(', ')}
                         </div>
                       </td>
 

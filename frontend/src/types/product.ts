@@ -3,6 +3,11 @@ export interface ChartDataPoint {
   date: string;
   actual: number | null;
   predicted: number | null;
+  annotation?: {
+    type: 'sale' | 'hike' | 'news';
+    label: string;
+    description: string;
+  };
 }
 
 export interface Product {

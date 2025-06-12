@@ -1,5 +1,5 @@
 """
-Price comparison API endpoints
+Enhanced Price comparison API endpoints supporting 15+ retailers
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Query
@@ -15,6 +15,7 @@ from app.core.database import get_db
 from app.models.product import Product
 from app.models.price_comparison import PriceComparison
 from app.services.price_comparison import price_comparison_service
+from app.services.retailer_manager import retailer_manager, RetailerCategory, RetailerPriority
 from app.worker import scrape_prices_task
 
 router = APIRouter()
@@ -22,7 +23,16 @@ router = APIRouter()
 class RealTimeSearchRequest(BaseModel):
     """Request model for real-time price search"""
     query: str = Field(..., description="Product search query")
-    sites: Optional[List[str]] = Field(default=["amazon", "walmart", "ebay"], description="List of sites to search")
+    sites: Optional[List[str]] = Field(default=None, description="List of sites to search (defaults to high-priority retailers)")
+    category: Optional[str] = Field(default=None, description="Retailer category filter")
+    max_retailers: Optional[int] = Field(default=8, description="Maximum number of retailers to search")
+
+class RetailerFilterRequest(BaseModel):
+    """Request model for filtered retailer search"""
+    query: str = Field(..., description="Product search query")
+    category: Optional[RetailerCategory] = Field(default=None, description="Retailer category")
+    priority: Optional[RetailerPriority] = Field(default=None, description="Retailer priority level")
+    include_specialty: bool = Field(default=True, description="Include specialty retailers")
 
 @router.get("/compare/{product_id}")
 async def get_price_comparison(
@@ -596,3 +606,186 @@ async def smart_price_search(
             status_code=500, 
             detail=f"Smart search failed: {str(e)}"
         )
+
+@router.get("/retailers")
+async def get_available_retailers():
+    """
+    Get list of all supported retailers with their status and categories
+    
+    Returns:
+        List of retailer configurations
+    """
+    try:
+        retailers = await retailer_manager.get_retailer_list_for_frontend()
+        stats = await retailer_manager.get_retailer_performance_stats()
+        
+        return {
+            "retailers": retailers,
+            "statistics": stats,
+            "total_retailers": len(retailers),
+            "categories": {
+                "general": [r for r in retailers if r['category'] == 'general'],
+                "electronics": [r for r in retailers if r['category'] == 'electronics'],
+                "fashion": [r for r in retailers if r['category'] == 'fashion'],
+                "home_improvement": [r for r in retailers if r['category'] == 'home_improvement'],
+                "wholesale": [r for r in retailers if r['category'] == 'wholesale'],
+                "specialty": [r for r in retailers if r['category'] == 'specialty']
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get retailers: {str(e)}")
+
+@router.post("/enhanced-search")
+async def enhanced_retailer_search(
+    request: RetailerFilterRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Enhanced search using retailer filtering and prioritization
+    
+    Args:
+        request: Enhanced search request with retailer filters
+        db: Database session
+        
+    Returns:
+        Filtered and prioritized search results
+    """
+    try:
+        # Get filtered retailers
+        active_retailers = await retailer_manager.get_active_retailers(
+            category=request.category,
+            priority=request.priority
+        )
+        
+        if not active_retailers:
+            raise HTTPException(
+                status_code=400, 
+                detail="No retailers match the specified criteria"
+            )
+        
+        # Convert to site names for scraper
+        sites = [retailer.domain.replace('.com', '') for retailer in active_retailers]
+        
+        # Call enhanced scraper service
+        scraper_url = "http://localhost:3001/api/search"
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                scraper_url,
+                json={"query": request.query, "sites": sites}
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Enhanced scraper service error: {response.status_code}"
+                )
+            
+            scraper_data = response.json()
+        
+        # Process and enrich results with retailer metadata
+        enhanced_results = []
+        for result in scraper_data.get('results', []):
+            site = result.get('site', '')
+            retailer_config = await retailer_manager.get_retailer_config(site)
+            
+            if retailer_config:
+                result['retailer_info'] = {
+                    'name': retailer_config.name,
+                    'category': retailer_config.category.value,
+                    'priority': retailer_config.priority.value,
+                    'base_url': retailer_config.base_url
+                }
+            
+            enhanced_results.append(result)
+        
+        # Sort by retailer priority and price
+        enhanced_results.sort(key=lambda x: (
+            x.get('retailer_info', {}).get('priority', 3),
+            float(''.join(filter(str.isdigit or '.'.__eq__, x.get('price', '999').replace(',', '')))) or 999
+        ))
+        
+        return {
+            'query': request.query,
+            'results': enhanced_results,
+            'search_metadata': {
+                'retailers_searched': len(sites),
+                'category_filter': request.category.value if request.category else None,
+                'priority_filter': request.priority.value if request.priority else None,
+                'total_results': len(enhanced_results),
+                'retailers_used': sites,
+                'timestamp': scraper_data.get('metadata', {}).get('timestamp')
+            }
+        }
+        
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504, 
+            detail="Enhanced scraper service timeout - please try again"
+        )
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503, 
+            detail="Enhanced scraper service unavailable - please ensure it's running on port 3001"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Enhanced search failed: {str(e)}"
+        )
+
+@router.get("/retailers/{retailer_key}/config")
+async def get_retailer_config(retailer_key: str):
+    """
+    Get configuration details for a specific retailer
+    
+    Args:
+        retailer_key: Retailer identifier
+        
+    Returns:
+        Retailer configuration details
+    """
+    try:
+        config = await retailer_manager.get_retailer_config(retailer_key)
+        if not config:
+            raise HTTPException(status_code=404, detail="Retailer not found")
+        
+        return {
+            "retailer": config.to_dict(),
+            "search_urls_example": await retailer_manager.generate_search_urls(
+                retailer_key, "example product", pages=1
+            )
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get retailer config: {str(e)}")
+
+@router.post("/retailers/{retailer_key}/status")
+async def update_retailer_status(
+    retailer_key: str,
+    status: str = Query(..., description="New status (active/inactive/maintenance)")
+):
+    """
+    Update retailer status
+    
+    Args:
+        retailer_key: Retailer identifier
+        status: New status
+        
+    Returns:
+        Update confirmation
+    """
+    try:
+        if status not in ["active", "inactive", "maintenance"]:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        success = await retailer_manager.update_retailer_status(retailer_key, status)
+        if not success:
+            raise HTTPException(status_code=404, detail="Retailer not found")
+        
+        return {
+            "message": f"Retailer {retailer_key} status updated to {status}",
+            "retailer_key": retailer_key,
+            "new_status": status
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update retailer status: {str(e)}")

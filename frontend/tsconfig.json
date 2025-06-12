@@ -19,10 +19,9 @@
     "jsx": "preserve",
     "jsxImportSource": "react",
     "target": "es2017",
-    "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
+    "forceConsistentCasingInFileNames": true,    "baseUrl": ".",
     "paths": {
-      "@/*": ["./app/*"]
+      "@/*": ["./src/*"]
     },
     "plugins": [
       {

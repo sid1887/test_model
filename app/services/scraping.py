@@ -1,7 +1,7 @@
 """
 Adaptive Web Scraping Engine - Multi-layer scraping with anti-blocking measures
 Implements direct API, HTML parsing, and headless browser strategies
-Enhanced with dedicated web scraper integration
+Enhanced with dedicated web scraper integration, proxy management, and stealth browsing
 """
 
 import asyncio
@@ -14,12 +14,17 @@ import random
 import time
 import json
 import logging
+from typing import Optional, Dict, List, Any
+import base64
 from typing import Dict, List, Optional, Any
 from urllib.parse import urljoin, urlparse
 import re
+from datetime import datetime, timedelta
+import hashlib
 
 from app.core.config import settings
 from app.core.monitoring import SCRAPING_COUNT, logger
+from app.services.stealth_browser import StealthBrowser, StealthSessionManager
 
 # Integration with our dedicated web scraper
 class CumpairScraperClient:
@@ -125,27 +130,49 @@ class CumpairScraperClient:
 # Global scraper client instance
 scraper_client = CumpairScraperClient()
 
-class ProxyManager:
-    """Manages proxy rotation and failure handling"""
+class EnhancedProxyManager:
+    """Enhanced proxy manager with health tracking and Redis persistence"""
     
     def __init__(self):
         self.proxy_pool = []
         self.failed_proxies = set()
+        self.proxy_health = {}  # url -> {success_rate, last_check, latency}
         self.rota_client_url = settings.rota_url
         self.ua = UserAgent()
-    
+        self.session_cache = {}  # Cache sessions per proxy
+        
     async def get_proxy(self) -> Optional[Dict]:
-        """Get a working proxy from the pool"""
+        """Get the best working proxy from the pool"""
         if not self.proxy_pool:
             await self.refresh_proxy_pool()
         
-        for proxy in self.proxy_pool:
-            if proxy['url'] not in self.failed_proxies:
-                return proxy
+        # Sort proxies by health score (success_rate / latency)
+        available_proxies = [
+            p for p in self.proxy_pool 
+            if p['url'] not in self.failed_proxies
+        ]
         
-        # If all proxies failed, refresh pool
-        await self.refresh_proxy_pool()
-        return self.proxy_pool[0] if self.proxy_pool else None
+        if not available_proxies:
+            await self.refresh_proxy_pool()
+            available_proxies = self.proxy_pool[:5]  # Take first 5 if all failed
+        
+        # Select best proxy based on health metrics
+        best_proxy = None
+        best_score = -1
+        
+        for proxy in available_proxies:
+            health = self.proxy_health.get(proxy['url'], {
+                'success_rate': 0.5, 'latency': 1.0, 'last_check': None
+            })
+            
+            # Calculate score: success_rate / (latency + 1)
+            score = health['success_rate'] / (health['latency'] + 1)
+            
+            if score > best_score:
+                best_score = score
+                best_proxy = proxy
+        
+        return best_proxy
     
     async def refresh_proxy_pool(self):
         """Refresh proxy pool from Rota service and free sources"""
@@ -184,63 +211,239 @@ class ProxyManager:
         return self.ua.random
 
 class CaptchaSolver:
-    """CAPTCHA solving using Tesseract and CNN fallback"""
+    """Enhanced CAPTCHA solving with self-hosted service, Tesseract, and CNN fallback"""
     
     def __init__(self):
         self.cnn_model = None
-        # Load CNN model if available
-        # self._load_cnn_model()
+        self.self_hosted_endpoint = None
+        self.ocr_engines = {}
+        self._init_captcha_services()
+      def _init_captcha_services(self):
+        """Initialize available CAPTCHA solving services"""
+        # Check for self-hosted 2captcha-compatible service
+        self_hosted_url = getattr(settings, 'captcha_service_url', None)
+        if self_hosted_url:
+            self.self_hosted_endpoint = self_hosted_url
+            logger.info(f"Self-hosted captcha service configured: {self_hosted_url}")
+        
+        # Initialize OCR engines
+        try:
+            import pytesseract
+            self.ocr_engines['tesseract'] = pytesseract
+            logger.info("Tesseract OCR initialized")
+        except ImportError:
+            logger.warning("Tesseract not available")
+        
+        try:
+            import easyocr
+            self.ocr_engines['easyocr'] = easyocr.Reader(['en'], gpu=False)  # Disable GPU for stability
+            logger.info("EasyOCR initialized")
+        except ImportError:
+            logger.info("EasyOCR not available (pip install easyocr to enable)")
+        except Exception as e:
+            logger.info(f"EasyOCR initialization failed: {e}")
     
-    def solve_captcha(self, image_path: str) -> Optional[str]:
+    async def solve_captcha(self, image_path: str, captcha_type: str = "text") -> Optional[str]:
         """
-        Solve CAPTCHA using multiple methods
+        Solve CAPTCHA using multiple methods with fallback chain
         
         Args:
             image_path: Path to CAPTCHA image
+            captcha_type: Type of captcha (text, recaptcha, hcaptcha, etc.)
             
         Returns:
             Solved CAPTCHA text or None
         """
+        methods = [
+            self._solve_with_self_hosted,
+            self._solve_with_easyocr,
+            self._solve_with_tesseract,
+            self._solve_with_cnn
+        ]
+        
+        for method in methods:
+            try:
+                result = await method(image_path, captcha_type)
+                if result:
+                    logger.info(f"CAPTCHA solved with {method.__name__}: {result}")
+                    return result
+            except Exception as e:
+                logger.debug(f"Method {method.__name__} failed: {e}")
+                continue
+        
+        logger.warning("All CAPTCHA solving methods failed")
+        return None
+    
+    async def _solve_with_self_hosted(self, image_path: str, captcha_type: str) -> Optional[str]:
+        """Solve using self-hosted 2captcha-compatible service"""
+        if not self.self_hosted_endpoint:
+            return None
+        
         try:
-            import pytesseract
-            from PIL import Image, ImageFilter
-            import numpy as np
+            import aiohttp
+            import base64
             
-            # Load and preprocess image
-            img = Image.open(image_path).convert('L')
-            img = img.filter(ImageFilter.SHARPEN)
-            img_array = np.array(img)
+            # Read and encode image
+            with open(image_path, 'rb') as f:
+                image_data = base64.b64encode(f.read()).decode('utf-8')
             
-            # Adaptive thresholding
-            img_array = np.where(img_array > 128, 255, 0)
+            async with aiohttp.ClientSession() as session:
+                # Submit captcha
+                submit_data = {
+                    'method': 'base64',
+                    'body': image_data,
+                    'json': 1
+                }
+                
+                if captcha_type == "recaptcha":
+                    submit_data.update({
+                        'method': 'userrecaptcha',
+                        'googlekey': 'SITE_KEY_HERE',  # Would be dynamic
+                        'pageurl': 'PAGE_URL_HERE'
+                    })
+                
+                async with session.post(f"{self.self_hosted_endpoint}/in.php", 
+                                      data=submit_data) as response:
+                    submit_result = await response.json()
+                
+                if submit_result.get('status') != 1:
+                    return None
+                
+                captcha_id = submit_result.get('request')
+                
+                # Poll for result
+                for _ in range(30):  # 30 attempts, 2 seconds each = 1 minute max
+                    await asyncio.sleep(2)
+                    
+                    async with session.get(f"{self.self_hosted_endpoint}/res.php", 
+                                         params={'action': 'get', 'id': captcha_id, 'json': 1}) as response:
+                        result = await response.json()
+                    
+                    if result.get('status') == 1:
+                        return result.get('request')
+                    elif result.get('error'):
+                        logger.error(f"Self-hosted service error: {result.get('error')}")
+                        return None
+                
+                return None
+                
+        except Exception as e:
+            logger.error(f"Self-hosted captcha service failed: {e}")
+            return None
+    
+    async def _solve_with_easyocr(self, image_path: str, captcha_type: str) -> Optional[str]:
+        """Solve using EasyOCR"""
+        if 'easyocr' not in self.ocr_engines:
+            return None
+        
+        try:
+            reader = self.ocr_engines['easyocr']
+            results = reader.readtext(image_path)
             
-            # OCR with Tesseract
-            text = pytesseract.image_to_string(img_array, config='--psm 7 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-            text = text.strip()
-            
-            if text and text.isalnum() and len(text) >= 4:
-                logger.info(f"CAPTCHA solved with Tesseract: {text}")
-                return text
-            
-            # Fallback to CNN if available
-            if self.cnn_model:
-                text = self._solve_with_cnn(img_array)
-                if text:
-                    logger.info(f"CAPTCHA solved with CNN: {text}")
+            # Extract text with highest confidence
+            if results:
+                text = ' '.join([result[1] for result in results if result[2] > 0.5])
+                text = ''.join(c for c in text if c.isalnum())  # Clean text
+                
+                if len(text) >= 4:
                     return text
             
-            logger.warning("Failed to solve CAPTCHA")
             return None
             
         except Exception as e:
-            logger.error(f"CAPTCHA solving failed: {e}")
+            logger.error(f"EasyOCR failed: {e}")
             return None
     
-    def _solve_with_cnn(self, image_array) -> Optional[str]:
-        """Solve CAPTCHA using CNN model (placeholder)"""
-        # Implement CNN-based CAPTCHA solving
-        # This would require a trained model
-        return None
+    async def _solve_with_tesseract(self, image_path: str, captcha_type: str) -> Optional[str]:
+        """Solve using Tesseract OCR with enhanced preprocessing"""
+        if 'tesseract' not in self.ocr_engines:
+            return None
+        
+        try:
+            from PIL import Image, ImageFilter, ImageEnhance
+            import numpy as np
+            
+            # Enhanced preprocessing
+            img = Image.open(image_path).convert('L')
+            
+            # Multiple preprocessing attempts
+            preprocessing_methods = [
+                lambda x: x.filter(ImageFilter.SHARPEN),
+                lambda x: ImageEnhance.Contrast(x).enhance(2.0),
+                lambda x: x.filter(ImageFilter.MedianFilter(3)),
+                lambda x: x.point(lambda p: 255 if p > 128 else 0)  # Binary threshold
+            ]
+            
+            for preprocess in preprocessing_methods:
+                try:
+                    processed_img = preprocess(img)
+                    
+                    # Multiple Tesseract configurations
+                    configs = [
+                        '--psm 7 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                        '--psm 8 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                        '--psm 6',
+                        '--psm 13'
+                    ]
+                    
+                    for config in configs:
+                        text = self.ocr_engines['tesseract'].image_to_string(processed_img, config=config)
+                        text = ''.join(c for c in text.strip() if c.isalnum())
+                        
+                        if text and len(text) >= 4:
+                            return text
+                
+                except Exception:
+                    continue
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Tesseract failed: {e}")
+            return None
+    
+    async def _solve_with_cnn(self, image_path: str, captcha_type: str) -> Optional[str]:
+        """Solve CAPTCHA using CNN model"""
+        if not self.cnn_model:
+            return None
+        
+        try:
+            # This would be implemented with a trained CNN model
+            # For now, it's a placeholder
+            return None
+            
+        except Exception as e:
+            logger.error(f"CNN captcha solving failed: {e}")
+            return None
+    
+    def load_cnn_model(self, model_path: str):
+        """Load a trained CNN model for captcha solving"""
+        try:
+            import torch
+            self.cnn_model = torch.load(model_path, map_location='cpu')
+            self.cnn_model.eval()
+            logger.info(f"CNN captcha model loaded from {model_path}")
+        except Exception as e:
+            logger.error(f"Failed to load CNN model: {e}")
+    
+    async def setup_self_hosted_service(self, service_url: str, api_key: str = None):
+        """Setup self-hosted captcha service configuration"""
+        self.self_hosted_endpoint = service_url
+        if api_key:
+            self.api_key = api_key
+        
+        # Test connection
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{service_url}/res.php?action=getbalance") as response:
+                    if response.status == 200:
+                        logger.info("Self-hosted captcha service connection successful")
+                        return True
+        except Exception as e:
+            logger.error(f"Failed to connect to self-hosted service: {e}")
+        
+        return False
 
 class BaseScraper:
     """Base scraper class with common functionality"""

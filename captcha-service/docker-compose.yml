@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  captcha-solver:
+    image: captcha-solver:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9001:9001"
+    environment:
+      - FLASK_ENV=production
+      - WORKERS=2
+      - TIMEOUT=120
+    volumes:
+      - ./temp:/app/temp
+    restart: unless-stopped
+    
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:

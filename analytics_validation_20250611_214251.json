@@ -1,0 +1,31 @@
+{
+  "test_timestamp": "2025-06-11T21:42:51.062240",
+  "test_type": "Analytics Features Validation (No Docker)",
+  "results": {
+    "imports": {
+      "core_modules": true,
+      "data_science_modules": false,
+      "nlp_modules": false,
+      "analytics_services": true,
+      "errors": [
+        "Data science modules: No module named 'sklearn.__check_build._check_build'\n___________________________________________________________________________\nContents of D:\\dev_packages\\python_packages\\sklearn\\__check_build:\nmeson.build               _check_build.cp313-win_amd64.lib_check_build.cp313-win_amd64.pyd\n_check_build.pyx          __init__.py               __pycache__\n___________________________________________________________________________\nIt seems that scikit-learn has not been built correctly.\n\nIf you have installed scikit-learn from source, please do not forget\nto build the package before using it. For detailed instructions, see:\nhttps://scikit-learn.org/dev/developers/advanced_installation.html#building-from-source\n\nIf you have used an installer, please check that it is suited for your\nPython version, your operating system and your platform.",
+        "NLP modules: No module named 'regex._regex'"
+      ]
+    },
+    "api_structure": {
+      "success": false,
+      "endpoints_found": 0,
+      "endpoints": []
+    },
+    "database_models": {
+      "success": false
+    }
+  },
+  "overall_status": "PARTIAL",
+  "recommendations": [
+    "Fix pandas installation for full data science features",
+    "Install NLP packages: textblob, vaderSentiment",
+    "Fix API endpoint imports",
+    "Verify database model definitions"
+  ]
+}

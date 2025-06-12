@@ -116,3 +116,19 @@ grafana_data/
 
 # Alembic
 alembic.ini.bak
+
+# Cumpair Docker secrets (NEVER COMMIT)
+secrets/
+!secrets/README.md
+!secrets/*.example
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Docker volumes
+postgres_data/
+redis_data/
+grafana_data/
+prometheus_data/

@@ -41,12 +41,31 @@ beautifulsoup4==4.12.2
 fake-useragent==1.4.0
 selenium==4.15.2
 
+# Enhanced Scraping & Anti-Block System
+easyocr==1.7.0
+asyncio-throttle==1.0.2
+
+# Proxy & Rate Management
+aiohttp-socks==0.8.4
+python-socks==2.0.3
+
 # CAPTCHA Solving
 pytesseract==0.3.10
 
 # Monitoring & Logging
 prometheus-client==0.19.0
 structlog==23.2.0
+
+# Data Science & Analytics
+pandas==2.1.4
+scikit-learn==1.3.2
+scipy==1.11.4
+prophet==1.1.5
+
+# Sentiment Analysis & NLP
+textblob==0.17.1
+vaderSentiment==3.3.2
+wordcloud==1.9.2
 
 # Utilities
 python-multipart==0.0.6

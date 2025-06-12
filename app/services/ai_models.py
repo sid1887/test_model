@@ -24,6 +24,7 @@ import torchvision.transforms as transforms
 from app.models.product import Product
 from app.models.analysis import Analysis
 from app.core.database import get_db_session
+from app.core.gpu_memory import managed_inference, get_optimal_device, get_memory_manager
 
 
 class ModelManager:
@@ -34,11 +35,19 @@ class ModelManager:
         self.clip_model = None
         self.clip_processor = None
         self.efficientnet_model = None
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Start with CPU for stability, GPU will be used dynamically
+        self.device = "cpu"  
         self.models_dir = Path("models")
         self.models_dir.mkdir(exist_ok=True)
         
-        print(f"🔥 AI Model Manager initialized - Device: {self.device}")
+        # Log GPU availability
+        gpu_available = torch.cuda.is_available()
+        if gpu_available:
+            gpu_name = torch.cuda.get_device_name(0)
+            gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
+            print(f"🔥 AI Model Manager initialized - Primary: CPU, GPU Available: {gpu_name} ({gpu_memory:.1f}GB)")
+        else:
+            print(f"🔥 AI Model Manager initialized - CPU only mode")
     
     async def initialize_models(self) -> bool:
         """Initialize all AI models asynchronously."""
@@ -50,8 +59,7 @@ class ModelManager:
             
             # Initialize CLIP for image-text matching
             await self._load_clip_model()
-            
-            # Initialize EfficientNet for specification extraction
+              # Initialize EfficientNet for specification extraction
             await self._load_efficientnet_model()
             
             print("✅ All AI models initialized successfully!")
@@ -60,31 +68,79 @@ class ModelManager:
         except Exception as e:
             print(f"❌ Model initialization failed: {e}")
             return False
-    
+            
     async def _load_yolo_model(self):
-        """Load YOLO model for object detection."""
-        print("📦 Loading YOLO model...")
+        """Load YOLO model for object detection with production optimizations."""
+        from app.core.monitoring import logger
         
         try:
             yolo_path = self.models_dir / "yolov8n.pt"
             
             # Download YOLO if not exists
             if not yolo_path.exists():
-                print("⬇️ Downloading YOLOv8n model...")
+                logger.info("⬇️ Downloading YOLOv8n model...")
+                # Disable verbose output during download for production
+                import os
+                os.environ['YOLO_VERBOSE'] = 'False'
+                # Disable ultralytics telemetry in production
+                os.environ['YOLO_DISABLE_TELEMETRY'] = 'True'
                 self.yolo_model = YOLO('yolov8n.pt')  # This will auto-download
                 # Move to models directory
                 import shutil
                 shutil.move('yolov8n.pt', yolo_path)
-            else:
-                self.yolo_model = YOLO(str(yolo_path))
+            else:                self.yolo_model = YOLO(str(yolo_path))
             
-            # Test the model
-            test_result = self.yolo_model.predict(source=np.zeros((640, 640, 3), dtype=np.uint8), verbose=False)
-            print(f"✅ YOLO model loaded successfully - Classes: {len(self.yolo_model.names)}")
+            # Load model on CPU first for stability
+            self.yolo_model.to("cpu")
+            
+            # Production optimizations for YOLO
+            if hasattr(self.yolo_model.model, 'eval'):
+                self.yolo_model.model.eval()  # Set to evaluation mode
+            
+            # Configure for production performance
+            self.yolo_model.overrides = {
+                'verbose': False,  # Disable verbose logging
+                'save': False,     # Don't save prediction images
+                'show': False,     # Don't show images
+                'conf': 0.25,      # Default confidence threshold
+                'iou': 0.45,       # IoU threshold for NMS
+                'max_det': 300,    # Maximum detections per image
+                'half': torch.cuda.is_available(),  # Use FP16 if GPU available
+                'device': self.device,
+                'workers': 1,      # Single worker for API usage
+                'batch': 1,        # Single batch processing
+                'imgsz': 640,      # Standard input size
+                'augment': False,  # Disable TTA for speed
+                'agnostic_nms': False,  # Class-specific NMS
+                'retina_masks': False,  # Disable for speed
+            }
+            
+            # Additional memory optimizations for production
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()  # Clear GPU cache
+                # Enable memory-efficient attention if available
+                try:
+                    torch.backends.cuda.matmul.allow_tf32 = True
+                    torch.backends.cudnn.allow_tf32 = True
+                except:
+                    pass
+            
+            # Warm up the model with a test prediction
+            test_input = np.zeros((640, 640, 3), dtype=np.uint8)
+            warmup_result = self.yolo_model.predict(
+                source=test_input, 
+                verbose=False,
+                save=False,
+                show=False
+            )
+            
+            logger.info(f"✅ YOLO model loaded and optimized - Classes: {len(self.yolo_model.names)}")
+            logger.info(f"🔧 Production settings applied - Device: {self.device}")
             
         except Exception as e:
-            print(f"❌ YOLO loading failed: {e}")
-            raise
+            logger.error(f"❌ YOLO loading failed: {e}")
+            logger.error(f"🔍 Error context - Path: {yolo_path}, Device: {self.device}")
+            raise RuntimeError(f"Failed to initialize YOLO model: {str(e)}") from e
     
     async def _load_clip_model(self):
         """Load CLIP model for image-text matching."""
@@ -237,10 +293,8 @@ class ProductAnalyzer:
             
             processing_time = time.time() - start_time
             analysis_results['processing_time'] = processing_time
-            
-            # Save to database
+              # Save to database
             await self._save_analysis_to_db(product_id, analysis_results, processing_time)
-            
             print(f"✅ Analysis completed in {processing_time:.2f}s - Confidence: {overall_confidence:.2f}")
             return analysis_results
             
@@ -260,7 +314,7 @@ class ProductAnalyzer:
             
             if image is None:
                 return None
-                
+            
             # Convert BGR to RGB
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             return image
@@ -270,42 +324,136 @@ class ProductAnalyzer:
             return None
     
     async def _detect_objects(self, image: np.ndarray) -> Dict[str, Any]:
-        """Detect objects in the image using YOLO."""
+        """Detect objects in the image using YOLO with production optimizations."""
+        from app.core.monitoring import logger, ANALYSIS_COUNT
+        import time
+        
+        start_time = time.time()
+        
         try:
-            # Run YOLO inference
-            results = self.model_manager.yolo_model.predict(source=image, verbose=False)
+            # Validate input
+            if image is None or image.size == 0:
+                raise ValueError("Invalid image input: empty or None")
+            
+            # Ensure image is in correct format
+            if len(image.shape) != 3 or image.shape[2] != 3:
+                raise ValueError(f"Invalid image shape: {image.shape}. Expected (H, W, 3)")
+            
+            # Memory optimization for large images
+            max_size = 1280  # Limit max dimension for performance
+            h, w = image.shape[:2]
+            if max(h, w) > max_size:
+                scale = max_size / max(h, w)
+                new_h, new_w = int(h * scale), int(w * scale)
+                image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+                logger.info(f"🔄 Image resized from {w}x{h} to {new_w}x{new_h} for performance")            # Run YOLO inference with hybrid CPU/GPU selection
+            with managed_inference("YOLO_Detection", "yolo", 700) as device:
+                with torch.inference_mode():  # Use inference_mode for better performance
+                    results = self.model_manager.yolo_model.predict(
+                        source=image,
+                        verbose=False,
+                        save=False,
+                        show=False,
+                        conf=0.25,  # Confidence threshold
+                        iou=0.45,   # IoU threshold for NMS
+                        max_det=300,  # Maximum detections
+                        half=(device == "cuda"),  # Use FP16 only on GPU
+                        device=device,  # Use the optimal device selected
+                        augment=False,  # Disable test-time augmentation for speed
+                        agnostic_nms=False,  # Use class-specific NMS
+                    )
             
             detections = []
+            total_confidence = 0.0
+            
             for result in results:
                 boxes = result.boxes
-                if boxes is not None:
+                if boxes is not None and len(boxes) > 0:
                     for box in boxes:
-                        # Extract detection info
-                        xyxy = box.xyxy[0].cpu().numpy()
-                        conf = float(box.conf[0].cpu().numpy())
-                        cls = int(box.cls[0].cpu().numpy())
-                        class_name = self.model_manager.yolo_model.names[cls]
-                        
-                        detections.append({
-                            'class': class_name,
-                            'confidence': conf,
-                            'bbox': xyxy.tolist(),
-                            'class_id': cls
-                        })
+                        try:
+                            # Extract detection info with validation
+                            xyxy = box.xyxy[0].cpu().numpy()
+                            conf = float(box.conf[0].cpu().numpy())
+                            cls = int(box.cls[0].cpu().numpy())
+                            
+                            # Validate detection data
+                            if conf < 0.0 or conf > 1.0:
+                                logger.warning(f"Invalid confidence score: {conf}")
+                                continue
+                                
+                            if cls < 0 or cls >= len(self.model_manager.yolo_model.names):
+                                logger.warning(f"Invalid class ID: {cls}")
+                                continue
+                            
+                            class_name = self.model_manager.yolo_model.names[cls]
+                            total_confidence += conf
+                            
+                            detection = {
+                                'class': class_name,
+                                'confidence': round(conf, 4),
+                                'bbox': [round(float(x), 2) for x in xyxy.tolist()],
+                                'class_id': cls,
+                                'area': float((xyxy[2] - xyxy[0]) * (xyxy[3] - xyxy[1]))
+                            }
+                            detections.append(detection)
+                            
+                        except Exception as box_error:
+                            logger.warning(f"Failed to process detection box: {box_error}")
+                            continue
             
-            # Sort by confidence
+            # Sort by confidence (highest first)
             detections.sort(key=lambda x: x['confidence'], reverse=True)
             
-            return {
+            processing_time = time.time() - start_time
+            detection_count = len(detections)
+            max_confidence = max([d['confidence'] for d in detections]) if detections else 0.0
+            avg_confidence = (total_confidence / detection_count) if detection_count > 0 else 0.0
+            
+            # Determine primary object with confidence filtering
+            primary_object = 'unknown'
+            if detections and detections[0]['confidence'] >= 0.5:
+                primary_object = detections[0]['class']
+            elif detections and detections[0]['confidence'] >= 0.25:
+                primary_object = f"{detections[0]['class']}_low_conf"
+            
+            result = {
                 'detections': detections,
-                'primary_object': detections[0]['class'] if detections else 'unknown',
-                'detection_count': len(detections),
-                'max_confidence': max([d['confidence'] for d in detections]) if detections else 0.0
+                'primary_object': primary_object,
+                'detection_count': detection_count,
+                'max_confidence': round(max_confidence, 4),
+                'avg_confidence': round(avg_confidence, 4),
+                'processing_time': round(processing_time, 4),
+                'model_version': 'yolov8n_optimized_v2',
+                'status': 'success',
+                'image_size': f"{image.shape[1]}x{image.shape[0]}"
             }
+              # Log performance metrics
+            ANALYSIS_COUNT.labels(status='success').inc()
+            logger.info(f"Object detection completed: {detection_count} objects in {processing_time:.3f}s")
+            
+            return result
             
         except Exception as e:
-            print(f"❌ Object detection failed: {e}")
-            return {'detections': [], 'primary_object': 'unknown', 'detection_count': 0, 'max_confidence': 0.0}
+            processing_time = time.time() - start_time
+            error_msg = f"Object detection failed: {str(e)}"
+              # Log the error with context
+            logger.error(f"{error_msg} (processing_time: {processing_time:.3f}s)")
+            ANALYSIS_COUNT.labels(status='error').inc()
+            
+            # Return structured error response instead of empty result
+            return {
+                'detections': [],
+                'primary_object': 'unknown',
+                'detection_count': 0,
+                'max_confidence': 0.0,
+                'avg_confidence': 0.0,
+                'processing_time': round(processing_time, 4),
+                'model_version': 'yolov8n_optimized_v2',
+                'status': 'error',
+                'error': error_msg,
+                'error_type': type(e).__name__,
+                'image_size': f"{image.shape[1]}x{image.shape[0]}" if image is not None and len(image.shape) >= 2 else "unknown"
+            }
     
     async def _classify_category(self, image: np.ndarray, detection_results: Dict) -> Dict[str, Any]:
         """Classify product category based on detected objects."""

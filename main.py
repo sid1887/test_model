@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.core.database import init_db
 from app.api.routes import analysis, analysis_new, comparison, health, price_comparison
 from app.core.monitoring import setup_monitoring
+from app.core.middleware import setup_middleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -67,6 +68,9 @@ app = FastAPI(
 # Setup monitoring
 setup_monitoring(app)
 
+# Setup security and error handling middleware
+setup_middleware(app)
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -85,6 +89,14 @@ app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
 app.include_router(analysis_new.router, prefix="/api/v1", tags=["analysis-ai"])
 app.include_router(comparison.router, prefix="/api/v1", tags=["comparison"])
 app.include_router(price_comparison.router, tags=["price-comparison"])
+
+# Include analytics router for enhanced data pipelines and pricing analytics
+try:
+    from app.api.routes.analytics import router as analytics_router
+    app.include_router(analytics_router, tags=["analytics"])
+    print("✅ Analytics routes loaded successfully")
+except Exception as e:
+    print(f"⚠️ Failed to load analytics routes: {e}")
 
 @app.get("/", response_class=HTMLResponse)
 async def root():

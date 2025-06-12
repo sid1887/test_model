@@ -129,10 +129,11 @@ class ObjectDetector:
         return cropped_paths
 
 class SpecificationExtractor:
-    """EfficientNet-based specification extraction"""
+    """Enhanced EfficientNet-based specification extraction with OCR integration"""
     
     def __init__(self):
         self.model = None
+        self.ocr_model = None
         self.load_model()
         self.transform = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -140,6 +141,79 @@ class SpecificationExtractor:
             transforms.Normalize(mean=[0.485, 0.456, 0.406], 
                                std=[0.229, 0.224, 0.225])
         ])
+        
+        # Enhanced features
+        self._spec_patterns = self._load_specification_patterns()
+        self._color_detector = self._init_color_detector()
+        self._text_processor = self._init_text_processor()
+    
+    def _load_specification_patterns(self) -> Dict:
+        """Load regex patterns for common specifications"""
+        return {
+            'dimensions': [
+                r'(\d+\.?\d*)\s*[x×]\s*(\d+\.?\d*)\s*[x×]\s*(\d+\.?\d*)\s*(cm|mm|inch|in)',
+                r'(\d+\.?\d*)\s*(cm|mm|inch|in)\s*[x×]\s*(\d+\.?\d*)\s*(cm|mm|inch|in)',
+                r'Size:\s*(\d+\.?\d*)\s*[x×]\s*(\d+\.?\d*)\s*(cm|mm|inch|in)'
+            ],
+            'weight': [
+                r'(\d+\.?\d*)\s*(kg|g|lbs|oz|pounds)',
+                r'Weight:\s*(\d+\.?\d*)\s*(kg|g|lbs|oz)',
+                r'(\d+\.?\d*)\s*(kilograms|grams)'
+            ],
+            'material': [
+                r'(?:Material|Made of|Fabric):\s*([A-Za-z\s]+)',
+                r'(\d+)%\s*([A-Za-z]+)',
+                r'(Cotton|Polyester|Wool|Silk|Leather|Metal|Plastic|Wood|Glass)'
+            ],
+            'color': [
+                r'Color:\s*([A-Za-z\s]+)',
+                r'Available in:\s*([A-Za-z\s,]+)',
+                r'(Black|White|Red|Blue|Green|Yellow|Pink|Purple|Orange|Brown|Gray|Grey)'
+            ],
+            'brand': [
+                r'Brand:\s*([A-Za-z\s&]+)',
+                r'by\s+([A-Za-z\s&]+)',
+                r'®\s*([A-Za-z\s&]+)'
+            ],
+            'model': [
+                r'Model:\s*([A-Za-z0-9\-\s]+)',
+                r'Model\s+#?\s*([A-Za-z0-9\-\s]+)',
+                r'SKU:\s*([A-Za-z0-9\-\s]+)'
+            ]
+        }
+    
+    def _init_color_detector(self):
+        """Initialize color detection using computer vision"""
+        try:
+            import cv2
+            return cv2
+        except ImportError:
+            logger.warning("OpenCV not available for color detection")
+            return None
+            
+    def _init_text_processor(self):
+        """Initialize OCR processor"""
+        ocr_engines = {}
+        
+        # Try Tesseract
+        try:
+            import pytesseract
+            ocr_engines['tesseract'] = pytesseract
+            logger.info("Tesseract OCR initialized")
+        except ImportError:
+            logger.warning("Tesseract not available")
+        
+        # Try EasyOCR
+        try:
+            import easyocr
+            ocr_engines['easyocr'] = easyocr.Reader(['en'], gpu=torch.cuda.is_available())
+            logger.info("EasyOCR initialized successfully")
+        except ImportError:
+            logger.info("EasyOCR not available")
+        except Exception as e:
+            logger.warning(f"EasyOCR initialization failed: {e}")
+        
+        return ocr_engines if ocr_engines else None
     
     def load_model(self):
         """Load specification extraction model"""

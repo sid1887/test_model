@@ -32,6 +32,20 @@ celery_app.conf.update(
     task_soft_time_limit=240,  # 4 minutes
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=50,
+    task_compression='gzip',  # Compress task data
+    result_compression='gzip',  # Compress results
+    task_routes={
+        'analyze_image': {'queue': 'image_processing'},
+        'scrape_prices': {'queue': 'web_scraping'},
+        'full_product_analysis': {'queue': 'image_processing'},
+    },
+    task_annotations={
+        '*': {'rate_limit': '10/s'},
+        'scrape_prices': {'rate_limit': '5/s'},  # Lower rate for scraping
+    },
+    worker_hijack_root_logger=False,  # Don't hijack logging
+    worker_log_format='[%(asctime)s: %(levelname)s/%(processName)s] %(message)s',
+    worker_task_log_format='[%(asctime)s: %(levelname)s/%(processName)s][%(task_name)s(%(task_id)s)] %(message)s',
 )
 
 logger = get_task_logger(__name__)

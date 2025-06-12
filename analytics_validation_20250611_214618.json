@@ -1,0 +1,31 @@
+{
+  "test_timestamp": "2025-06-11T21:46:18.517788",
+  "test_type": "Analytics Features Validation (No Docker)",
+  "results": {
+    "imports": {
+      "core_modules": true,
+      "data_science_modules": false,
+      "nlp_modules": false,
+      "analytics_services": true,
+      "errors": [
+        "Data science modules: The `scipy` install you are using seems to be broken, (extension modules cannot be imported), please try reinstalling.",
+        "NLP modules: No module named 'regex._regex'"
+      ]
+    },
+    "api_structure": {
+      "success": false,
+      "endpoints_found": 0,
+      "endpoints": []
+    },
+    "database_models": {
+      "success": false
+    }
+  },
+  "overall_status": "PARTIAL",
+  "recommendations": [
+    "Fix pandas installation for full data science features",
+    "Install NLP packages: textblob, vaderSentiment",
+    "Fix API endpoint imports",
+    "Verify database model definitions"
+  ]
+}

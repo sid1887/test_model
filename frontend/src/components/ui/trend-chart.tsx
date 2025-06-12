@@ -7,27 +7,39 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAccessibility } from '@/hooks/useAccessibility';
-
-interface ChartDataPoint {
-  date: string;
-  actual: number | null;
-  predicted: number | null;
-  annotation?: {
-    type: 'sale' | 'hike' | 'news';
-    label: string;
-    description: string;
-  };
-}
-
-interface Product {
-  id: string;
-  name: string;
-  chartData: ChartDataPoint[];
-  price: string;
-}
+import { Product, ChartDataPoint } from '@/types/product';
 
 interface TrendChartProps {
   products: Product[];
+}
+
+interface CombinedDataPoint {
+  date: string;
+  annotation?: ChartDataPoint['annotation'];
+  [key: string]: string | number | null | ChartDataPoint['annotation'] | undefined;
+}
+
+interface CsvRow {
+  Date: string;
+  [key: string]: string | number;
+}
+
+interface TooltipPayload {
+  value: number | null;
+  name: string;
+  color: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+}
+
+interface AnnotationDotProps {
+  cx?: number;
+  cy?: number;
+  payload?: CombinedDataPoint;
 }
 
 const TrendChart: React.FC<TrendChartProps> = ({ products }) => {
@@ -64,11 +76,9 @@ const TrendChart: React.FC<TrendChartProps> = ({ products }) => {
     });
 
     // Sort dates
-    const sortedDates = Array.from(allDates).sort();
-
-    // Create combined data points
+    const sortedDates = Array.from(allDates).sort();    // Create combined data points
     return sortedDates.map(date => {
-      const dataPoint: any = { date };
+      const dataPoint: CombinedDataPoint = { date };
       let annotation: ChartDataPoint['annotation'] | undefined;
       
       products.forEach(product => {
@@ -100,14 +110,14 @@ const TrendChart: React.FC<TrendChartProps> = ({ products }) => {
       setIsUpdating(false);
       announce('Chart data updated');
     }, 1000);
-  };
-
-  const handleDownloadCSV = () => {
+  };  const handleDownloadCSV = () => {
     const csvData = combinedData.map(point => {
-      const row: any = { Date: point.date };
+      const row: CsvRow = { Date: point.date };
       products.forEach(product => {
-        row[`${product.name} (Actual)`] = point[`${product.name}_actual`] || '';
-        row[`${product.name} (Predicted)`] = point[`${product.name}_predicted`] || '';
+        const actualValue = point[`${product.name}_actual`];
+        const predictedValue = point[`${product.name}_predicted`];
+        row[`${product.name} (Actual)`] = (typeof actualValue === 'number' ? actualValue : '');
+        row[`${product.name} (Predicted)`] = (typeof predictedValue === 'number' ? predictedValue : '');
       });
       return row;
     });
@@ -131,8 +141,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ products }) => {
     URL.revokeObjectURL(url);
     announce('CSV file downloaded');
   };
-
-  const formatTooltip = (value: any, name: string, props: any) => {
+  const formatTooltip = (value: number | null, name: string) => {
     if (value === null) return ['No data', name];
     return [`$${value}`, name];
   };
@@ -146,15 +155,14 @@ const TrendChart: React.FC<TrendChartProps> = ({ products }) => {
     const colors = ['#3b82f6', '#8b5cf6', '#ef4444', '#10b981', '#f59e0b'];
     return colors[index % colors.length];
   };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
+    if (active && payload && payload.length && label) {
       const dataPoint = combinedData.find(d => d.date === label);
       
       return (
         <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
           <p className="font-semibold mb-2">{`Date: ${formatDate(label)}`}</p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
               {`${entry.name}: $${entry.value}`}
             </p>
@@ -170,9 +178,8 @@ const TrendChart: React.FC<TrendChartProps> = ({ products }) => {
     }
     return null;
   };
-
-  const AnnotationDot = ({ cx, cy, payload }: any) => {
-    if (!payload.annotation) return null;
+  const AnnotationDot: React.FC<AnnotationDotProps> = ({ cx, cy, payload }) => {
+    if (!payload?.annotation) return null;
     
     return (
       <g>
@@ -184,7 +191,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ products }) => {
           stroke="#ffffff"
           strokeWidth={2}
           className="cursor-pointer hover:r-8 transition-all"
-          onClick={() => setSelectedAnnotation(payload.annotation)}
+          onClick={() => setSelectedAnnotation(payload.annotation || null)}
         />
         <circle
           cx={cx}
@@ -343,19 +350,35 @@ const TrendChart: React.FC<TrendChartProps> = ({ products }) => {
                       name={`${product.name} (Predicted)`}
                     />
                   </React.Fragment>
-                ))}
-
-                {/* Annotation dots */}
-                {combinedData.map((dataPoint, index) => 
-                  dataPoint.annotation ? (
+                ))}                {/* Annotation dots */}
+                {combinedData.map((dataPoint, index) => {
+                  if (!dataPoint.annotation) return null;
+                  
+                  // Find the first non-null value for positioning
+                  let yValue: number | null = null;
+                  for (const product of products) {
+                    const actualValue = dataPoint[`${product.name}_actual`];
+                    const predictedValue = dataPoint[`${product.name}_predicted`];
+                    if (typeof actualValue === 'number') {
+                      yValue = actualValue;
+                      break;
+                    } else if (typeof predictedValue === 'number') {
+                      yValue = predictedValue;
+                      break;
+                    }
+                  }
+                  
+                  if (yValue === null) return null;
+                  
+                  return (
                     <ReferenceDot
                       key={index}
                       x={dataPoint.date}
-                      y={dataPoint[`${products[0]?.name}_actual`] || dataPoint[`${products[0]?.name}_predicted`]}
+                      y={yValue}
                       shape={<AnnotationDot />}
                     />
-                  ) : null
-                )}
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>

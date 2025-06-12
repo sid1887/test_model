@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, TrendingUp, Shield, Zap } from 'lucide-react';
-import { FloatingSearch } from '@/components/ui/floating-search';
+import { Sparkles, TrendingUp, Shield, Zap, Store, Settings } from 'lucide-react';
+import { RetailerFilterSearch, SearchFilters } from '@/components/ui/retailer-filter-search';
+import { EnhancedSearchResults, SearchResult } from '@/components/ui/enhanced-search-results';
+import { RetailerDashboard } from '@/components/ui/retailer-dashboard';
 import { ValueScoredProductCard } from '@/components/ui/value-scored-product-card';
 import { ComparisonMatrix } from '@/components/ui/comparison-matrix';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { MagneticButton } from '@/components/ui/magnetic-button';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { PageTransition } from '@/components/ui/page-transition';
-import { ScrollReveal } from '@/components/ui/scroll-reveal';
-import { FloatingElements } from '@/components/ui/floating-elements';
-import { ProductCardSkeleton } from '@/components/ui/skeleton-loader';
-import { ResponsiveNavigation } from '@/components/ui/responsive-navigation';
-import { SuspenseWrapper } from '@/components/ui/loading-system';
 import { ScreenReaderAnnouncement } from '@/hooks/useAccessibility';
+import { FloatingElements } from '@/components/ui/floating-elements';
+import { ResponsiveNavigation } from '@/components/ui/responsive-navigation';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { ScrollReveal } from '@/components/ui/scroll-reveal';
+import { SuspenseWrapper } from '@/components/ui/loading-system';
+import { ProductCardSkeleton } from '@/components/ui/skeleton-loader';
 import { Product } from '@/types/product';
 
 const Index = () => {
@@ -22,6 +27,10 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const [showComparison, setShowComparison] = useState(false);
+  const [showRetailerDashboard, setShowRetailerDashboard] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [currentQuery, setCurrentQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // Enhanced navigation with smart features
   const navigationItems = [
@@ -29,7 +38,16 @@ const Index = () => {
     { label: 'AI Search', href: '/search' },
     { label: 'Price Alerts', href: '/alerts' },
     { label: 'Smart Lists', href: '/lists' },
-    { label: 'Analytics', href: '/analytics' }
+    { label: 'Analytics', href: '/analytics' },
+    { 
+      label: 'Retailers', 
+      href: '/retailers',
+      children: [
+        { label: 'Dashboard', href: '/retailers/dashboard' },
+        { label: 'Configuration', href: '/retailers/config' },
+        { label: 'Performance', href: '/retailers/performance' }
+      ]
+    }
   ];
 
   // Enhanced mock product data with AI-powered insights
@@ -181,6 +199,95 @@ const Index = () => {
 
   const selectedProductsData = featuredProducts.filter(p => selectedProducts.has(p.id));
 
+  // Enhanced search handlers for 15+ retailers
+  const handleEnhancedSearch = async (query: string, filters: SearchFilters) => {
+    setSearchLoading(true);
+    setCurrentQuery(query);
+    setAnnouncement(`Searching across ${filters.maxRetailers || 8} retailers for "${query}"`);
+    
+    try {      // Call enhanced search API with retailer filters
+      const response = await fetch('/api/v1/comparison/enhanced-search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          category: filters.category,
+          priority: filters.priority,
+          include_specialty: filters.includeSpecialty,
+          max_retailers: filters.maxRetailers
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+        // Transform API results to SearchResult format
+      const transformedResults: SearchResult[] = data.results.map((result: Record<string, unknown>, index: number) => ({
+        id: `${result.site}-${index}`,
+        title: result.title || result.name || 'Unknown Product',
+        price: result.price_text || result.price || '$0.00',
+        originalPrice: result.original_price,
+        image: result.image_url || result.image,
+        link: result.url || result.link || '#',
+        site: result.site,
+        rating: result.rating,
+        reviewCount: result.review_count,
+        retailer_info: result.retailer_info,
+        features: result.features || [],
+        availability: result.availability || 'in-stock',
+        shipping: result.shipping
+      }));
+
+      setSearchResults(transformedResults);
+      setAnnouncement(`Found ${transformedResults.length} products across ${data.search_metadata?.retailers_searched || 0} retailers`);
+      
+    } catch (error) {
+      console.error('Enhanced search failed:', error);
+      setAnnouncement('Search failed - please try again');
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleImageSearch = () => {
+    setAnnouncement('Visual search activated - upload an image to find similar products');
+    // Image search functionality would be implemented here
+  };
+
+  const handleVoiceSearch = () => {
+    setAnnouncement('Voice search activated - speak your search query');
+    // Voice search functionality would be implemented here
+  };
+
+  const handleRetailerToggle = (retailerKey: string, status: string) => {
+    setAnnouncement(`${retailerKey} retailer ${status === 'active' ? 'enabled' : 'disabled'}`);
+    // API call to update retailer status would be implemented here
+  };
+
+  const handleRetailerConfig = (retailerKey: string) => {
+    setAnnouncement(`Opening configuration for ${retailerKey}`);
+    // Navigate to retailer configuration would be implemented here
+  };
+
+  const handleSearchResultAction = (action: string, result: SearchResult) => {
+    switch (action) {
+      case 'cart':
+        setAnnouncement(`${result.title} added to cart with price protection`);
+        break;
+      case 'wishlist':
+        setAnnouncement(`${result.title} added to wishlist - we'll track price drops`);
+        break;
+      case 'compare':
+        setAnnouncement(`${result.title} added to comparison`);
+        break;
+    }
+  };
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-black dark:to-purple-900 transition-all duration-700 relative overflow-hidden">
@@ -272,22 +379,33 @@ const Index = () => {
                 Experience next-generation e-commerce with GPT-4 powered discovery, predictive analytics, 
                 blockchain-verified reviews, and personalized AI recommendations that save you time and money
               </motion.p>
-            </ScrollReveal>
-
+            </ScrollReveal>            
+            
             <ScrollReveal direction="up" delay={0.6}>
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 300 }}
                 className="px-4 relative z-20"
               >
-                <FloatingSearch
-                  onSearch={(query) => console.log('AI Search:', query)}
-                  onImageSearch={() => console.log('Visual search activated')}
-                  onVoiceSearch={() => console.log('Voice search activated')}
+                <RetailerFilterSearch
+                  onSearch={handleEnhancedSearch}
+                  onImageSearch={handleImageSearch}
+                  onVoiceSearch={handleVoiceSearch}
                 />
-                <div className="mt-2 text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <span>⚡</span>
-                  <span>0.03s avg. • AI-Enhanced</span>
+                <div className="mt-4 text-center">
+                  <div className="text-xs text-muted-foreground flex items-center justify-center gap-1 mb-2">
+                    <span>⚡</span>
+                    <span>0.03s avg. • AI-Enhanced • 15+ Retailers</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowRetailerDashboard(!showRetailerDashboard)}
+                    className="text-xs"
+                  >
+                    <Store className="w-3 h-3 mr-1" />
+                    {showRetailerDashboard ? 'Hide' : 'Manage'} Retailers
+                  </Button>
                 </div>
               </motion.div>
             </ScrollReveal>
@@ -313,6 +431,41 @@ const Index = () => {
             </ScrollReveal>
           </div>
         </section>
+
+        {/* Retailer Dashboard Section */}
+        {showRetailerDashboard && (
+          <section className="relative z-10 py-16 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <ScrollReveal direction="up">
+                <RetailerDashboard
+                  onRetailerToggle={handleRetailerToggle}
+                  onRetailerConfig={handleRetailerConfig}
+                />
+              </ScrollReveal>
+            </div>
+          </section>
+        )}
+
+        {/* Enhanced Search Results Section */}
+        {searchResults.length > 0 && (
+          <section className="relative z-10 py-16 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <ScrollReveal direction="up">
+                <EnhancedSearchResults
+                  results={searchResults}
+                  query={currentQuery}
+                  loading={searchLoading}
+                  onAddToCart={(result) => handleSearchResultAction('cart', result)}
+                  onAddToWishlist={(result) => handleSearchResultAction('wishlist', result)}
+                  onCompare={(result) => handleSearchResultAction('compare', result)}
+                  onRetailerFilter={(retailers) => {
+                    setAnnouncement(`Filtered by retailers: ${retailers.join(', ')}`);
+                  }}
+                />
+              </ScrollReveal>
+            </div>
+          </section>
+        )}
 
         {/* Enhanced Features Section */}
         <section className="relative z-10 py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
@@ -398,8 +551,7 @@ const Index = () => {
                         isLiked={likedProducts.has(product.id)}
                         isComparing={selectedProducts.has(product.id)}
                         onLike={handleLike}
-                        onCompare={handleQuickCompare}
-                        onAddToCart={(id) => {
+                        onCompare={handleQuickCompare}                        onAddToCart={(id: string) => {
                           console.log('Add to cart:', id);
                           setAnnouncement('Product added to cart with price protection');
                         }}
@@ -429,7 +581,7 @@ const Index = () => {
                   <ComparisonMatrix 
                     products={selectedProductsData}
                     onSave={() => console.log('Save comparison')}
-                    onRemove={(id) => handleQuickCompare(id)}
+                    onRemove={(id: string) => handleQuickCompare(id)}
                   />
                 </div>
               </ScrollReveal>

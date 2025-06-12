@@ -57,43 +57,44 @@ const rateLimiterMiddleware = async (req, res, next) => {
   }
 };
 
-// Site-specific scrapers
-const scrapers = {  amazon: {
-  search: async (query, browser) => {
-    const page = await browser.newPage();
-    try {
-      // Enhanced anti-detection setup
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      await page.setViewport({ width: 1366, height: 768 });
+// Site-specific scrapers - Enhanced to support 15+ retailers
+const scrapers = {
+  amazon: {
+    search: async (query, browser) => {
+      const page = await browser.newPage();
+      try {
+        // Enhanced anti-detection setup
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1366, height: 768 });
 
-      // Add random delays and mouse movements
-      await page.evaluateOnNewDocument(() => {
-        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      });
+        // Add random delays and mouse movements
+        await page.evaluateOnNewDocument(() => {
+          Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        });
 
-      // Navigate with longer timeout and better wait strategy
-      await page.goto(`https://www.amazon.com/s?k=${encodeURIComponent(query)}`, {
-        waitUntil: 'domcontentloaded',
-        timeout: 45000
-      });
+        // Navigate with longer timeout and better wait strategy
+        await page.goto(`https://www.amazon.com/s?k=${encodeURIComponent(query)}`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 45000
+        });
 
-      // Wait for content to load
-      await page.waitForTimeout(2000);
+        // Wait for content to load
+        await page.waitForTimeout(2000);
 
-      const products = await page.evaluate(() => {
-        // Try multiple selector strategies
-        const selectors = [
-          '[data-component-type="s-search-result"]',
-          '.s-result-item',
-          '.sg-col-inner .s-card-container',
-          '[data-asin]:not([data-asin=""])'
-        ];
+        const products = await page.evaluate(() => {
+          // Try multiple selector strategies
+          const selectors = [
+            '[data-component-type="s-search-result"]',
+            '.s-result-item',
+            '.sg-col-inner .s-card-container',
+            '[data-asin]:not([data-asin=""])'
+          ];
 
-        let items = [];
-        for (const selector of selectors) {
-          items = Array.from(document.querySelectorAll(selector));
-          if (items.length > 0) break;
-        }
+          let items = [];
+          for (const selector of selectors) {
+            items = Array.from(document.querySelectorAll(selector));
+            if (items.length > 0) break;
+          }
 
         return items.slice(0, 5).map(item => {
           // Try multiple title selectors

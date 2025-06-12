@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  haproxy:
+    image: haproxy:2.8
+    container_name: cumpair-proxy-manager
+    ports:
+      - "8080:8080"  # Proxy port
+      - "8081:8081"  # Stats UI
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./scripts:/scripts:ro
+    networks:
+      - proxy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: cumpair-proxy-redis
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts
+    volumes:
+      - proxy_redis_data:/data
+    networks:
+      - proxy-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  proxy-manager-api:
+    build: .
+    container_name: cumpair-proxy-api
+    ports:
+      - "8001:8001"  # API port
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - HAPROXY_STATS_URL=http://haproxy:8081/stats
+      - PROXY_HEALTH_CHECK_INTERVAL=60
+      - FREE_PROXY_SOURCES=true
+    volumes:
+      - ./haproxy.cfg:/app/haproxy.cfg
+      - ./scripts:/app/scripts
+    networks:
+      - proxy-network
+    depends_on:
+      - redis
+      - haproxy
+    restart: unless-stopped
+
+volumes:
+  proxy_redis_data:
+
+networks:
+  proxy-network:
+    driver: bridge
