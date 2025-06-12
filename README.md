@@ -101,11 +101,13 @@ curl http://localhost:8000/api/v1/health
 ```
 
 ### 4. Access the Application
-- **Web Interface**: http://localhost:8000
+- **Web Interface**: http://localhost:8080 (Frontend)
+- **API Backend**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
-- **Monitoring (Grafana)**: http://localhost:3000 (admin/admin)
+- **Monitoring (Grafana)**: http://localhost:3002 (admin/admin)
 - **Task Monitor (Flower)**: http://localhost:5555
 - **Metrics (Prometheus)**: http://localhost:9090
+- **Scraper Service**: http://localhost:3001
 
 ## 📖 API Usage
 

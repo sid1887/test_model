@@ -1,46 +1,72 @@
-# Comprehensive Web Scraper
+# Cumpair Scraper Service - Node.js/Playwright
 
-A robust, production-ready web scraping system built with Node.js that provides comprehensive scraping capabilities with rate limiting, caching, concurrent processing, and a RESTful API.
+🕷️ **Cumpair Scraper Service** is a robust, production-ready web scraping system built with Node.js and Playwright that provides comprehensive e-commerce data extraction capabilities.
 
-## Features
+## 🚀 Features
 
-- 🚀 **Multiple Scraping Methods**: Puppeteer for dynamic content and Cheerio for static HTML
-- 🔄 **Concurrent Scraping**: Process multiple URLs simultaneously with configurable concurrency limits
-- ⚡ **Redis Caching**: Intelligent caching system to avoid redundant requests
-- 🛡️ **Rate Limiting**: Built-in rate limiting to respect website policies
-- 🔄 **Retry Mechanisms**: Automatic retry with exponential backoff for failed requests
-- 📊 **Monitoring & Stats**: Comprehensive statistics and health monitoring
-- 🌐 **RESTful API**: Easy-to-use HTTP API for scraping operations
-- 🔧 **Error Handling**: Robust error handling and logging
-- 🧪 **Testing**: Comprehensive test suite with Jest
-- 📝 **Logging**: Detailed logging with Winston
+### 🌐 Multi-Platform Support
+- **Amazon** - Product details, prices, ratings, reviews
+- **eBay** - Auction and Buy-It-Now listings
+- **Walmart** - Product information and pricing
+- **Best Buy** - Electronics and tech products
+- **Target** - General merchandise
+- **15+ Retailers** - Easily extensible architecture
 
-## Installation
+### 🔧 Advanced Scraping Capabilities
+- **Playwright Browser Automation** - Handle dynamic content and JavaScript
+- **Cheerio HTML Parsing** - Fast static content extraction
+- **Anti-Detection Features** - User-agent rotation, proxy support
+- **CAPTCHA Handling** - Integration with captcha-service
+- **Rate Limiting** - Respect website policies and avoid blocks
 
-1. Clone or download the project
-2. Install dependencies:
+### ⚡ Performance & Reliability
+- **Concurrent Processing** - Multiple URLs simultaneously
+- **Redis Caching** - Intelligent caching to avoid redundant requests
+- **Retry Mechanisms** - Automatic retry with exponential backoff
+- **Error Recovery** - Robust error handling and logging
+- **Health Monitoring** - Comprehensive statistics and metrics
+
+## 🏗️ Architecture
+
+### Port Configuration
+- **Development**: Port 3001 (standardized)
+- **Docker**: Port 3001 (container and host)
+- **API Base**: `http://localhost:3001`
+
+### Integration Points
+- **FastAPI Backend**: Receives scraping requests on port 8000
+- **Redis Cache**: Shared caching layer on port 6379
+- **Captcha Service**: CAPTCHA solving on dedicated service
+- **Proxy Service**: Proxy rotation management
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+
+- Redis (optional, falls back to memory)
+- Docker (for containerized deployment)
+
+### Installation
 ```bash
+# Install dependencies
 npm install
-```
 
-3. Set up Redis (optional, falls back to memory if not available)
-4. Configure environment variables by copying `.env` file and adjusting values
+# Install Playwright browsers
+npx playwright install chromium
 
-## Quick Start
-
-### Start the API Server
-```bash
+# Start the service
 npm start
 ```
 
-### Development Mode (with auto-restart)
-```bash
-npm run dev
-```
-
-### Run Example Usage
-```bash
-npm run example
+### Environment Variables
+Create a `.env` file:
+```env
+PORT=3001
+REDIS_URL=redis://localhost:6379
+CAPTCHA_SERVICE_URL=http://localhost:8081
+LOG_LEVEL=info
+CONCURRENT_LIMIT=5
+REQUEST_TIMEOUT=30000
 ```
 
 ## API Endpoints

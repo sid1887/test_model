@@ -1,39 +1,100 @@
-# Welcome to your Lovable project
+# Cumpair Frontend - React/TypeScript Application
 
-## Project info
+🔍 **Cumpair Frontend** is a modern React/TypeScript web application for AI-powered product analysis and price comparison.
 
-**URL**: https://lovable.dev/projects/c045a815-50ed-4339-b4db-78c47640603a
+## 🚀 Features
 
-## How can I edit this code?
+### 🖼️ Product Image Upload & Analysis
+- Drag-and-drop image upload interface
+- Real-time progress indicators
+- Support for JPEG, PNG, WebP formats
+- Image preview and cropping
 
-There are several ways of editing your application.
+### 📊 Price Comparison Matrix
+- Interactive comparison table
+- Real-time price updates
+- Retailer logos and ratings
+- Sorting and filtering options
 
-**Use Lovable**
+### 📈 Trend Visualization
+- Price history charts
+- Interactive trend analysis
+- Statistical insights
+- Export capabilities
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/c045a815-50ed-4339-b4db-78c47640603a) and start prompting.
+### 🎨 Modern UI/UX
+- Tailwind CSS styling
+- Responsive design
+- Dark/light theme support
+- Accessible components
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🏗️ Tech Stack
 
-**Use your preferred IDE**
+- **React 18** with TypeScript
+- **Vite** for fast development and building
+- **Tailwind CSS** for styling
+- **Shadcn/ui** component library
+- **Recharts** for data visualization
+- **React Query** for state management
+- **React Router** for navigation
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 Development Setup
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
 
-Follow these steps:
+### Installation
+```bash
+# Install dependencies
+npm install
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Environment Variables
+Create a `.env.development` file:
+```env
+VITE_API_BASE_URL=http://localhost:8000
+VITE_ENABLE_MOCK_DATA=false
+```
+
+## 🔧 API Integration
+
+The frontend connects to the Cumpair backend API on port 8000:
+
+### Development Proxy
+- Vite dev server proxies `/api/` requests to `http://localhost:8000`
+- Configured in `vite.config.ts`
+
+### Production
+- Nginx serves static files and proxies API requests
+- Configured in `nginx.conf`
+
+### API Endpoints Used
+- `POST /api/v1/analyze` - Upload and analyze product images
+- `GET /api/v1/analyze/{id}` - Get analysis results
+- `GET /api/v1/compare/{id}` - Get price comparison data
+- `POST /api/v1/compare/{id}/refresh` - Refresh price data
+
+## 📁 Project Structure
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # Shadcn/ui components
+│   └── custom/         # Custom components
+├── pages/              # Page components
+├── types/              # TypeScript type definitions
+├── utils/              # Utility functions
+├── hooks/              # Custom React hooks
+└── styles/             # Global styles
 ```
 
 **Edit a file directly in GitHub**
