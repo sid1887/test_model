@@ -245,12 +245,12 @@ const RetailerDashboard: React.FC<RetailerDashboardProps> = ({
   const filteredRetailers = retailers.filter(retailer => 
     selectedCategory === 'all' || retailer.category === selectedCategory
   );
-
   const sortedRetailers = [...filteredRetailers].sort((a, b) => {
     switch (sortBy) {
-      case 'priority':
+      case 'priority': {
         const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
         return priorityOrder[a.priority as keyof typeof priorityOrder] - priorityOrder[b.priority as keyof typeof priorityOrder];
+      }
       case 'name':
         return a.name.localeCompare(b.name);
       case 'successRate':

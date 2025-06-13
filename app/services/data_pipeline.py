@@ -398,7 +398,6 @@ class DataPipelineService:
             
             normalized = scaler.fit_transform(data_reshaped).flatten()
             self.scalers[feature_name] = scaler
-            
             return normalized
             
         except Exception as e:
@@ -413,13 +412,13 @@ class DataPipelineService:
                 numeric_val = self._safe_float(value)
                 if numeric_val is not None:
                     numeric_values.append(numeric_val)
-            
             return np.array(numeric_values)
             
         except Exception as e:
             logger.error(f"Numeric extraction failed: {e}")
             return np.array([])
-      def _safe_float(self, value: Any) -> Optional[float]:
+    
+    def _safe_float(self, value: Any) -> Optional[float]:
         """Safely convert value to float"""
         try:
             if value is None:

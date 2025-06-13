@@ -22,10 +22,7 @@ puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
 // Configure logging
 const logger = winston.createLogger({
   level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   transports: [
     new winston.transports.Console(),
     new winston.transports.File({ filename: 'scraper.log' })
@@ -64,7 +61,9 @@ const scrapers = {
       const page = await browser.newPage();
       try {
         // Enhanced anti-detection setup
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.setUserAgent(
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        );
         await page.setViewport({ width: 1366, height: 768 });
 
         // Add random delays and mouse movements
@@ -96,140 +95,148 @@ const scrapers = {
             if (items.length > 0) break;
           }
 
-        return items.slice(0, 5).map(item => {
-          // Try multiple title selectors
-          const titleSelectors = [
-            'h2 a span',
-            '.a-link-normal .a-text-normal',
-            'h2 .a-link-normal',
-            '.s-link-style .a-text-normal'
-          ];
+          return items
+            .slice(0, 5)
+            .map((item) => {
+              // Try multiple title selectors
+              const titleSelectors = [
+                'h2 a span',
+                '.a-link-normal .a-text-normal',
+                'h2 .a-link-normal',
+                '.s-link-style .a-text-normal'
+              ];
 
-          let titleEl = null;
-          for (const selector of titleSelectors) {
-            titleEl = item.querySelector(selector);
-            if (titleEl) break;
-          }
+              let titleEl = null;
+              for (const selector of titleSelectors) {
+                titleEl = item.querySelector(selector);
+                if (titleEl) break;
+              }
 
-          // Try multiple price selectors
-          const priceSelectors = [
-            '.a-price .a-offscreen',
-            '.a-price-whole',
-            '.a-price .a-price-fraction',
-            '.a-price-range .a-offscreen'
-          ];
+              // Try multiple price selectors
+              const priceSelectors = [
+                '.a-price .a-offscreen',
+                '.a-price-whole',
+                '.a-price .a-price-fraction',
+                '.a-price-range .a-offscreen'
+              ];
 
-          let priceEl = null;
-          for (const selector of priceSelectors) {
-            priceEl = item.querySelector(selector);
-            if (priceEl) break;
-          }
+              let priceEl = null;
+              for (const selector of priceSelectors) {
+                priceEl = item.querySelector(selector);
+                if (priceEl) break;
+              }
 
-          const imageEl = item.querySelector('img');
-          const linkEl = item.querySelector('h2 a') || item.querySelector('.a-link-normal');
+              const imageEl = item.querySelector('img');
+              const linkEl = item.querySelector('h2 a') || item.querySelector('.a-link-normal');
 
-          return {
-            title: titleEl?.textContent?.trim() || '',
-            price: priceEl?.textContent?.trim() || '',
-            image: imageEl?.src || '',
-            link: linkEl ? `https://www.amazon.com${linkEl.getAttribute('href')}` : '',
-            site: 'amazon'
-          };
-        }).filter(item => item.title && item.title.length > 0);
-      });
+              return {
+                title: titleEl?.textContent?.trim() || '',
+                price: priceEl?.textContent?.trim() || '',
+                image: imageEl?.src || '',
+                link: linkEl ? `https://www.amazon.com${linkEl.getAttribute('href')}` : '',
+                site: 'amazon'
+              };
+            })
+            .filter((item) => item.title && item.title.length > 0);
+        });
 
-      logger.info(`Amazon scraper found ${products.length} products for query: ${query}`);
-      return products;
+        logger.info(`Amazon scraper found ${products.length} products for query: ${query}`);
+        return products;
+      } catch (error) {
+        logger.error(`Amazon scraper error: ${error.message}`);
+        return [];
+      } finally {
+        await page.close();
+      }
+    }
+  },
 
-    } catch (error) {
-      logger.error(`Amazon scraper error: ${error.message}`);
-      return [];
-    } finally {
-      await page.close();
+  walmart: {
+    search: async (query, browser) => {
+      const page = await browser.newPage();
+      try {
+        await page.setUserAgent(new UserAgent().toString());
+        await page.goto(`https://www.walmart.com/search?q=${encodeURIComponent(query)}`, {
+          waitUntil: 'networkidle0',
+          timeout: 30000
+        });
+
+        const products = await page.evaluate(() => {
+          const items = Array.from(
+            document.querySelectorAll('[data-automation-id="product-title"]')
+          );
+          return items
+            .slice(0, 5)
+            .map((item) => {
+              const container = item.closest('[data-item-id]');
+              const titleEl = container?.querySelector('[data-automation-id="product-title"]');
+              const priceEl = container?.querySelector('[itemprop="price"]');
+              const imageEl = container?.querySelector('img');
+              const linkEl = container?.querySelector('a');
+
+              return {
+                title: titleEl?.textContent?.trim() || '',
+                price: priceEl?.textContent?.trim() || '',
+                image: imageEl?.src || '',
+                link: linkEl ? `https://www.walmart.com${linkEl.getAttribute('href')}` : '',
+                site: 'walmart'
+              };
+            })
+            .filter((item) => item.title && item.price);
+        });
+
+        logger.info(`Walmart scraper found ${products.length} products for query: ${query}`);
+        return products;
+      } catch (error) {
+        logger.error(`Walmart scraper error: ${error.message}`);
+        return [];
+      } finally {
+        await page.close();
+      }
+    }
+  },
+
+  ebay: {
+    search: async (query, browser) => {
+      const page = await browser.newPage();
+      try {
+        await page.setUserAgent(new UserAgent().toString());
+        await page.goto(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}`, {
+          waitUntil: 'networkidle0',
+          timeout: 30000
+        });
+
+        const products = await page.evaluate(() => {
+          const items = Array.from(document.querySelectorAll('.s-item'));
+          return items
+            .slice(0, 5)
+            .map((item) => {
+              const titleEl = item.querySelector('.s-item__title');
+              const priceEl = item.querySelector('.s-item__price');
+              const imageEl = item.querySelector('.s-item__image img');
+              const linkEl = item.querySelector('.s-item__link');
+
+              return {
+                title: titleEl?.textContent?.trim() || '',
+                price: priceEl?.textContent?.trim() || '',
+                image: imageEl?.src || '',
+                link: linkEl?.getAttribute('href') || '',
+                site: 'ebay'
+              };
+            })
+            .filter((item) => item.title && item.price && !item.title.includes('Shop on eBay'));
+        });
+
+        logger.info(`eBay scraper found ${products.length} products for query: ${query}`);
+        return products;
+      } catch (error) {
+        logger.error(`eBay scraper error: ${error.message}`);
+        return [];
+      } finally {
+        await page.close();
+      }
     }
   }
-},
-
-walmart: {
-  search: async (query, browser) => {
-    const page = await browser.newPage();
-    try {
-      await page.setUserAgent(new UserAgent().toString());
-      await page.goto(`https://www.walmart.com/search?q=${encodeURIComponent(query)}`, {
-        waitUntil: 'networkidle0',
-        timeout: 30000
-      });
-
-      const products = await page.evaluate(() => {
-        const items = Array.from(document.querySelectorAll('[data-automation-id="product-title"]'));
-        return items.slice(0, 5).map(item => {
-          const container = item.closest('[data-item-id]');
-          const titleEl = container?.querySelector('[data-automation-id="product-title"]');
-          const priceEl = container?.querySelector('[itemprop="price"]');
-          const imageEl = container?.querySelector('img');
-          const linkEl = container?.querySelector('a');
-
-          return {
-            title: titleEl?.textContent?.trim() || '',
-            price: priceEl?.textContent?.trim() || '',
-            image: imageEl?.src || '',
-            link: linkEl ? `https://www.walmart.com${linkEl.getAttribute('href')}` : '',
-            site: 'walmart'
-          };
-        }).filter(item => item.title && item.price);
-      });
-
-      logger.info(`Walmart scraper found ${products.length} products for query: ${query}`);
-      return products;
-
-    } catch (error) {
-      logger.error(`Walmart scraper error: ${error.message}`);
-      return [];
-    } finally {
-      await page.close();
-    }
-  }
-},
-
-ebay: {
-  search: async (query, browser) => {
-    const page = await browser.newPage();
-    try {
-      await page.setUserAgent(new UserAgent().toString());
-      await page.goto(`https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}`, {
-        waitUntil: 'networkidle0',
-        timeout: 30000
-      });
-
-      const products = await page.evaluate(() => {
-        const items = Array.from(document.querySelectorAll('.s-item'));
-        return items.slice(0, 5).map(item => {
-          const titleEl = item.querySelector('.s-item__title');
-          const priceEl = item.querySelector('.s-item__price');
-          const imageEl = item.querySelector('.s-item__image img');
-          const linkEl = item.querySelector('.s-item__link');
-
-          return {
-            title: titleEl?.textContent?.trim() || '',
-            price: priceEl?.textContent?.trim() || '',
-            image: imageEl?.src || '',
-            link: linkEl?.getAttribute('href') || '',
-            site: 'ebay'
-          };
-        }).filter(item => item.title && item.price && !item.title.includes('Shop on eBay'));
-      });
-
-      logger.info(`eBay scraper found ${products.length} products for query: ${query}`);
-      return products;
-
-    } catch (error) {
-      logger.error(`eBay scraper error: ${error.message}`);
-      return [];
-    } finally {
-      await page.close();
-    }
-  }
-}
 };
 
 // Browser instance management
@@ -259,21 +266,25 @@ const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8
 // POST product data to Python feature extraction service
 async function postToPythonService(productData) {
   try {
-    const response = await axios.post(`${PYTHON_SERVICE_URL}/analysis/ingest-scraped-product`, {
-      product_id: productData.id,
-      site: productData.site,
-      url: productData.link,
-      title: productData.title,
-      price_raw: productData.price,
-      currency: 'USD',
-      image_url: productData.image,
-      timestamp: new Date().toISOString()
-    }, {
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json'
+    const response = await axios.post(
+      `${PYTHON_SERVICE_URL}/analysis/ingest-scraped-product`,
+      {
+        product_id: productData.id,
+        site: productData.site,
+        url: productData.link,
+        title: productData.title,
+        price_raw: productData.price,
+        currency: 'USD',
+        image_url: productData.image,
+        timestamp: new Date().toISOString()
+      },
+      {
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
       }
-    });
+    );
 
     logger.info(`Successfully posted product ${productData.id} to Python service`);
     return response.data;
@@ -364,7 +375,7 @@ app.post('/scrape', rateLimiterMiddleware, async (req, res) => {
     const scrapingResults = await Promise.all(scrapingPromises);
 
     // Flatten results
-    scrapingResults.forEach(siteResults => {
+    scrapingResults.forEach((siteResults) => {
       results.push(...siteResults);
     });
 
@@ -387,7 +398,8 @@ app.post('/scrape', rateLimiterMiddleware, async (req, res) => {
         timestamp: new Date().toISOString(),
         feature_extraction_enabled: true
       }
-    });  } catch (error) {
+    });
+  } catch (error) {
     logger.error(`Scraping error: ${error.message}`);
     res.status(500).json({ error: 'Internal scraping error' });
   }
@@ -417,7 +429,6 @@ app.post('/scrape-single', rateLimiterMiddleware, async (req, res) => {
         timestamp: new Date().toISOString()
       }
     });
-
   } catch (error) {
     logger.error(`Single site scraping error: ${error.message}`);
     res.status(500).json({ error: 'Internal scraping error' });

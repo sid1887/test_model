@@ -735,8 +735,8 @@ async function postToPythonService(productData) {
 
 // Routes
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
     supported_retailers: Object.keys(scrapers).length,
     retailers: Object.keys(scrapers)
@@ -757,7 +757,7 @@ app.post('/scrape', rateLimiterMiddleware, async (req, res) => {
 
     // Filter requested sites to only supported ones
     const supportedSites = sites.filter(site => scrapers[site]);
-    
+
     logger.info(`Starting scraping for query: ${query} across ${supportedSites.length} sites`);
 
     // Run scrapers in parallel with controlled concurrency
@@ -919,7 +919,7 @@ app.get('/api/retailers', (req, res) => {
 });
 
 // Error handling middleware
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
   logger.error('Unhandled error:', error);
   res.status(500).json({
     error: 'Internal server error',

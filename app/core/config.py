@@ -26,8 +26,7 @@ class Settings(BaseSettings):
     
     # Proxy Configuration
     rota_url: str = "http://localhost:8001"
-    
-    # File Upload Configuration
+      # File Upload Configuration
     upload_dir: str = "uploads"
     max_file_size: int = 10485760  # 10MB
     allowed_extensions: str = ".jpg,.jpeg,.png,.webp,.bmp"
@@ -36,12 +35,14 @@ class Settings(BaseSettings):
     def allowed_extensions_list(self) -> List[str]:
         """Get allowed extensions as a list"""
         return [ext.strip() for ext in self.allowed_extensions.split(',')]
-      # AI Model Configuration
+    
+    # AI Model Configuration
     models_dir: str = "models"
     yolo_model_path: str = "models/yolov8n.pt"
     efficientnet_model_path: str = "models/spec_extractor.h5"
     clip_model_name: str = "ViT-B/32"
-    clip_cache_dir: str = "models/clip_cache"      # Scraper Service Configuration
+    clip_cache_dir: str = "models/clip_cache"
+      # Scraper Service Configuration
     scraper_service_url: str = "http://localhost:3001"
     max_concurrent_requests: int = 100
     download_delay: float = 0.25
