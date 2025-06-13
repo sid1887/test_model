@@ -14,7 +14,7 @@ $additionalPackages = @(
     "fake-useragent==1.4.0",
     "asyncio-throttle==1.0.2",
     "aiohttp-socks==0.8.4",
-    "python-socks==2.0.3"
+    "python-socks==2.4.3"
 )
 
 foreach ($package in $additionalPackages) {

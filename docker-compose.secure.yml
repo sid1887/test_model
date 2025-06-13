@@ -88,7 +88,7 @@ services:
       - DATABASE_PASSWORD_FILE=/run/secrets/db_password
       - REDIS_PASSWORD_FILE=/run/secrets/redis_password
       # Scraping settings
-      - SCRAPER_SERVICE_URL=http://scraper:3000
+      - SCRAPER_SERVICE_URL=http://scraper:3001
       - PROXY_SERVICE_URL=http://proxy-manager:8001
       - CAPTCHA_SERVICE_URL=http://captcha-service:9001
       # Docker mode

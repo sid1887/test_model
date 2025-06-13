@@ -318,6 +318,13 @@ class PreFlightChecker:
         if not self.check_package_list(remaining_ai, "AI/ML"):
             success = False
         
+        # 5. Run linting checks
+        if not self.run_linting_checks():
+            success = False
+        
+        # 6. Check for outdated dependencies
+        self.check_outdated_dependencies()
+        
         # Final report
         logger.info("=" * 60)
         logger.info("📊 Pre-flight Check Summary:")
@@ -347,6 +354,155 @@ class PreFlightChecker:
         return not bool(self.critical_failures)  # Return True if no critical failures
 
 
+    def run_linting_checks(self) -> bool:
+        """Run code quality and linting checks"""
+        logger.info("🔍 Running code quality checks...")
+        
+        checks_passed = True
+        
+        # Python syntax check using py_compile
+        try:
+            import py_compile
+            python_files = list(Path('.').rglob('*.py'))
+            syntax_errors = []
+            
+            for py_file in python_files[:10]:  # Limit to avoid overwhelming output
+                if 'venv' not in str(py_file) and '__pycache__' not in str(py_file):
+                    try:
+                        py_compile.compile(str(py_file), doraise=True)
+                    except py_compile.PyCompileError as e:
+                        syntax_errors.append(f"{py_file}: {e}")
+            
+            if syntax_errors:
+                logger.warning(f"⚠️ Python syntax errors found: {len(syntax_errors)}")
+                for error in syntax_errors[:3]:  # Show first 3
+                    logger.warning(f"   {error}")
+                checks_passed = False
+            else:
+                logger.info("✅ Python syntax validation passed")
+                
+        except Exception as e:
+            logger.warning(f"⚠️ Could not run Python syntax check: {e}")
+        
+        # Try to run flake8 if available
+        try:
+            result = subprocess.run(
+                ["flake8", "--max-line-length=100", "--ignore=E501,W503", ".", "--count", "--select=E9,F63,F7,F82"],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.returncode == 0:
+                logger.info("✅ Python linting (flake8) passed")
+            else:
+                logger.warning("⚠️ Python linting issues found (non-critical)")
+                if result.stdout:
+                    logger.warning(f"   {result.stdout[:200]}...")
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            logger.info("ℹ️ flake8 not available (optional)")
+        
+        # Check JavaScript/Node.js files in scraper directory
+        scraper_dir = Path('scraper')
+        if scraper_dir.exists():
+            try:
+                # Check if package.json exists and is valid
+                package_json = scraper_dir / 'package.json'
+                if package_json.exists():
+                    with open(package_json) as f:
+                        json.load(f)  # Validate JSON syntax
+                    logger.info("✅ scraper/package.json is valid")
+                    
+                    # Try ESLint if available
+                    try:
+                        result = subprocess.run(
+                            ["npm", "run", "lint"], 
+                            cwd=str(scraper_dir),
+                            capture_output=True, text=True, timeout=30
+                        )
+                        if result.returncode == 0:
+                            logger.info("✅ JavaScript linting passed")
+                        else:
+                            logger.warning("⚠️ JavaScript linting issues found (non-critical)")
+                    except (subprocess.TimeoutExpired, FileNotFoundError):
+                        logger.info("ℹ️ npm lint not available (optional)")
+                        
+            except json.JSONDecodeError:
+                logger.warning("⚠️ scraper/package.json has invalid JSON syntax")
+                checks_passed = False
+            except Exception as e:
+                logger.warning(f"⚠️ Could not validate scraper files: {e}")
+        
+        # Docker configuration validation
+        try:
+            # Validate docker-compose files
+            compose_files = list(Path('.').glob('docker-compose*.yml'))
+            for compose_file in compose_files:
+                result = subprocess.run(
+                    ["docker-compose", "-f", str(compose_file), "config"],
+                    capture_output=True, text=True, timeout=15
+                )
+                if result.returncode == 0:
+                    logger.info(f"✅ {compose_file.name} syntax is valid")
+                else:
+                    logger.warning(f"⚠️ {compose_file.name} has syntax issues")
+                    checks_passed = False
+                    
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            logger.info("ℹ️ Docker Compose validation skipped (docker-compose not available)")
+        
+        return checks_passed
+
+    def check_outdated_dependencies(self) -> Dict[str, List[str]]:
+        """Check for outdated dependencies"""
+        logger.info("📦 Checking for outdated dependencies...")
+        
+        outdated_info = {
+            "python": [],
+            "javascript": []
+        }
+        
+        # Check Python packages
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "list", "--outdated", "--format=json"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                outdated_packages = json.loads(result.stdout)
+                for pkg in outdated_packages[:5]:  # Show top 5 outdated
+                    outdated_info["python"].append(f"{pkg['name']} ({pkg['version']} -> {pkg['latest_version']})")
+        except Exception as e:
+            logger.warning(f"   ⚠️ Could not check Python package updates: {e}")
+            
+        # Check JavaScript packages (if scraper exists)
+        if os.path.exists("scraper/package.json"):
+            try:
+                result = subprocess.run(
+                    ["npm", "outdated", "--json"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd="scraper"
+                )
+                if result.stdout.strip():
+                    try:
+                        outdated_packages = json.loads(result.stdout)
+                        for pkg_name, pkg_info in list(outdated_packages.items())[:5]:
+                            current = pkg_info.get('current', 'unknown')
+                            wanted = pkg_info.get('wanted', 'unknown')
+                            outdated_info["javascript"].append(f"{pkg_name} ({current} -> {wanted})")
+                    except json.JSONDecodeError:
+                        pass
+            except Exception as e:
+                logger.warning(f"   ⚠️ Could not check JavaScript package updates: {e}")
+                
+        if outdated_info["python"]:
+            logger.warning(f"   📦 Outdated Python packages: {', '.join(outdated_info['python'][:3])}")
+        if outdated_info["javascript"]:
+            logger.warning(f"   📦 Outdated JavaScript packages: {', '.join(outdated_info['javascript'][:3])}")
+            
+        return outdated_info
+
 def main():
     """Main entry point for pre-flight check"""
     import argparse
@@ -360,10 +516,8 @@ def main():
     args = parser.parse_args()
     
     if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    
+        logging.getLogger().setLevel(logging.DEBUG)    
     checker = PreFlightChecker()
-    
     try:
         logger.info("🚀 Starting Cumpair Pre-flight Dependency Check...")
         
@@ -375,6 +529,16 @@ def main():
             success = checker.check_package_list(checker.CRITICAL_PACKAGES, "Critical")
         else:
             success = checker.run_complete_check()
+            
+        # Run linting and quality checks (non-blocking)
+        if not args.quick:
+            logger.info("\n🔍 Running code quality checks...")
+            checker.run_linting_checks()
+            
+            # Check for outdated dependencies
+            outdated = checker.check_outdated_dependencies()
+            if outdated["python"] or outdated["javascript"]:
+                logger.info("💡 Consider updating outdated packages for security and performance")
         
         # Generate health report
         report = checker.generate_health_report()

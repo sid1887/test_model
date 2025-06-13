@@ -99,7 +99,7 @@ if ($LASTEXITCODE -eq 0) {
     }
     
     if ($Profile -eq "scraper" -or $Profile -eq "full") {
-        Write-Host "  🕷️ Scraper: http://localhost:3000" -ForegroundColor White
+        Write-Host "  🕷️ Scraper: http://localhost:3001" -ForegroundColor White
     }
     
     if ($Profile -eq "worker" -or $Profile -eq "full") {

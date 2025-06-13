@@ -16,11 +16,11 @@ class WebScraper {
     this.retryAttempts = options.retryAttempts || parseInt(process.env.RETRY_ATTEMPTS) || 3;
     this.retryDelay = options.retryDelay || parseInt(process.env.RETRY_DELAY) || 1000;
     this.headless = options.headless !== undefined ? options.headless : process.env.HEADLESS !== 'false';
-    
+
     // Rate limiter - 1 request per second per domain
     this.rateLimiter = new RateLimiterMemory({
       points: 1,
-      duration: 1000,
+      duration: 1000
     });
 
     this.activeBrowsers = new Set();
@@ -53,7 +53,7 @@ class WebScraper {
       });
 
       this.activeBrowsers.add(browser);
-      
+
       browser.on('disconnected', () => {
         this.activeBrowsers.delete(browser);
       });
@@ -154,7 +154,7 @@ class WebScraper {
     } catch (error) {
       const responseTime = Date.now() - startTime;
       this.updateStats(false, responseTime);
-      
+
       logger.error(`Failed to scrape ${url}:`, error);
       throw error;
     } finally {
@@ -219,7 +219,7 @@ class WebScraper {
     } catch (error) {
       const responseTime = Date.now() - startTime;
       this.updateStats(false, responseTime);
-      
+
       logger.error(`Failed to scrape ${url} with Cheerio:`, error);
       throw error;
     }
@@ -227,23 +227,23 @@ class WebScraper {
 
   async scrapeWithRetry(url, options = {}) {
     let lastError;
-    
+
     for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
       try {
         const method = options.usePuppeteer ? 'scrapeWithPuppeteer' : 'scrapeWithCheerio';
         const result = await this[method](url, options);
-        
+
         // Cache the result in Redis
         if (options.cache) {
           const cacheKey = `scraper:${Buffer.from(url).toString('base64')}`;
           await redisClient.set(cacheKey, result, options.cacheTTL || 3600);
         }
-        
+
         return result;
       } catch (error) {
         lastError = error;
         logger.warn(`Scraping attempt ${attempt} failed for ${url}: ${error.message}`);
-        
+
         if (attempt < this.retryAttempts) {
           const delay = this.retryDelay * Math.pow(2, attempt - 1); // Exponential backoff
           logger.info(`Retrying in ${delay}ms...`);
@@ -251,15 +251,13 @@ class WebScraper {
         }
       }
     }
-    
+
     throw new Error(`Failed to scrape ${url} after ${this.retryAttempts} attempts. Last error: ${lastError.message}`);
   }
-
   async scrapeConcurrently(urls, options = {}) {
     const results = [];
     const errors = [];
-    const semaphore = new Array(this.maxConcurrent).fill(null);
-    
+
     const processUrl = async (url, index) => {
       try {
         const result = await this.scrapeWithRetry(url, options);
@@ -273,10 +271,10 @@ class WebScraper {
     // Process URLs in batches
     for (let i = 0; i < urls.length; i += this.maxConcurrent) {
       const batch = urls.slice(i, i + this.maxConcurrent);
-      const promises = batch.map((url, batchIndex) => 
+      const promises = batch.map((url, batchIndex) =>
         processUrl(url, i + batchIndex)
       );
-      
+
       await Promise.all(promises);
       logger.info(`Completed batch ${Math.floor(i / this.maxConcurrent) + 1}`);
     }
@@ -309,7 +307,7 @@ class WebScraper {
     } else {
       this.stats.failedRequests++;
     }
-    
+
     // Update average response time
     const totalTime = this.stats.averageResponseTime * (this.stats.totalRequests - 1) + responseTime;
     this.stats.averageResponseTime = Math.round(totalTime / this.stats.totalRequests);
@@ -320,9 +318,9 @@ class WebScraper {
     return {
       ...this.stats,
       uptime,
-      successRate: this.stats.totalRequests > 0 ? 
-        ((this.stats.successfulRequests / this.stats.totalRequests) * 100).toFixed(2) + '%' : '0%',
-      requestsPerMinute: this.stats.totalRequests > 0 ? 
+      successRate: this.stats.totalRequests > 0 ?
+        `${((this.stats.successfulRequests / this.stats.totalRequests) * 100).toFixed(2)}%` : '0%',
+      requestsPerMinute: this.stats.totalRequests > 0 ?
         Math.round((this.stats.totalRequests / uptime) * 60000) : 0,
       activeBrowsers: this.activeBrowsers.size
     };
@@ -330,15 +328,15 @@ class WebScraper {
 
   async cleanup() {
     logger.info('Cleaning up web scraper...');
-    
+
     // Close all active browsers
-    const browserPromises = Array.from(this.activeBrowsers).map(browser => 
+    const browserPromises = Array.from(this.activeBrowsers).map(browser =>
       browser.close().catch(error => logger.error('Error closing browser:', error))
     );
-    
+
     await Promise.all(browserPromises);
     this.activeBrowsers.clear();
-    
+
     logger.info('Web scraper cleanup completed');
   }
 }

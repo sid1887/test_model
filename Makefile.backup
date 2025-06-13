@@ -101,7 +101,7 @@ health: ## Check health of all running services
 	@echo "PostgreSQL:" && docker exec compair_postgres pg_isready -U compair || echo "❌ Not healthy"
 	@echo "Redis:" && docker exec compair_redis redis-cli ping || echo "❌ Not healthy"
 	@echo "FastAPI:" && curl -s http://localhost:8000/api/v1/health > /dev/null && echo "✅ Healthy" || echo "❌ Not healthy"
-	@echo "Scraper:" && curl -s http://localhost:3000/health > /dev/null && echo "✅ Healthy" || echo "❌ Not healthy"
+	@echo "Scraper:" && curl -s http://localhost:3001/health > /dev/null && echo "✅ Healthy" || echo "❌ Not healthy"
 
 ps: status ## Alias for status
 
@@ -231,7 +231,7 @@ ifeq ($(OS),Windows_NT)
 	@Write-Host "Service URLs (when running):" -ForegroundColor Green
 	@Write-Host "   Main App:     http://localhost:8000"
 	@Write-Host "   API Docs:     http://localhost:8000/docs"
-	@Write-Host "   Scraper:      http://localhost:3000"
+	@Write-Host "   Scraper:      http://localhost:3001"
 	@Write-Host "   Frontend:     http://localhost:3001"
 	@Write-Host "   Flower:       http://localhost:5555"
 	@Write-Host "   Grafana:      http://localhost:3002"
@@ -255,7 +255,7 @@ endif
 	@echo "🌐 Service URLs (when running):"
 	@echo "   Main App:     http://localhost:8000"
 	@echo "   API Docs:     http://localhost:8000/docs"
-	@echo "   Scraper:      http://localhost:3000"
+	@echo "   Scraper:      http://localhost:3001"
 	@echo "   Frontend:     http://localhost:3001"
 	@echo "   Flower:       http://localhost:5555"
 	@echo "   Grafana:      http://localhost:3002"

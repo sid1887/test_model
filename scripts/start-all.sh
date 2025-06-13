@@ -134,7 +134,7 @@ fi
 if $INCLUDE_SCRAPER && docker-compose ps | grep -q "compair_scraper"; then
     echo -n "⏳ Scraper Service: "
     ATTEMPT=0
-    until docker exec compair_scraper curl -f http://localhost:3000/health > /dev/null 2>&1; do
+    until docker exec compair_scraper curl -f http://localhost:3001/health > /dev/null 2>&1; do
       sleep 2
       ATTEMPT=$((ATTEMPT + 1))
       if [ $ATTEMPT -ge 15 ]; then
@@ -172,18 +172,18 @@ fi
 
 if $INCLUDE_SCRAPER; then
     echo "🕷️  Scraping Services:"
-    echo "   🌐 Node.js Scraper: http://localhost:3000"
+    echo "   🌐 Node.js Scraper: http://localhost:3001"
 fi
 
 if $INCLUDE_FRONTEND; then
     echo "🎨 Frontend Services:"
-    echo "   💻 Next.js App: http://localhost:3001"
+    echo "   💻 Next.js App: http://localhost:3002"
 fi
 
 if $INCLUDE_MONITOR; then
     echo "📊 Monitoring Services:"
     echo "   📈 Prometheus: http://localhost:9090"
-    echo "   📉 Grafana: http://localhost:3002 (admin/admin)"
+    echo "   📉 Grafana: http://localhost:3003 (admin/admin)"
 fi
 
 echo ""

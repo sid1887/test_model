@@ -6,7 +6,7 @@ class RedisClient {
     this.client = null;
     this.isConnected = false;
     this.isEnabled = process.env.REDIS_ENABLED !== 'false';
-    
+
     if (!this.isEnabled) {
       logger.info('Redis is disabled - running without caching');
     }

@@ -52,7 +52,7 @@ async function demonstrateWebScraper() {
         content: 'body'
       }
     });
-    
+
     logger.info('Batch scraping summary:', batchResult.summary);
 
     // Example 4: Check cache
@@ -90,10 +90,10 @@ async function demonstrateAdvancedScraping() {
       title: 'h1.product-title, .product-name, [data-testid="product-title"]',
       price: '.price, .product-price, [data-testid="price"]',
       description: '.product-description, .description',
-      images: { 
-        selector: '.product-images img, .gallery img', 
-        attribute: 'src', 
-        multiple: true 
+      images: {
+        selector: '.product-images img, .gallery img',
+        attribute: 'src',
+        multiple: true
       },
       availability: '.availability, .stock-status',
       rating: '.rating, .stars, [data-testid="rating"]'
@@ -105,9 +105,9 @@ async function demonstrateAdvancedScraping() {
       author: '.author, .byline, [data-testid="author"]',
       publishDate: '.publish-date, .date, time[datetime]',
       content: '.article-content, .story-body, .content',
-      tags: { 
-        selector: '.tags a, .categories a', 
-        multiple: true 
+      tags: {
+        selector: '.tags a, .categories a',
+        multiple: true
       }
     };
 

@@ -173,7 +173,7 @@ if ($INCLUDE_SCRAPER) {
             Start-Sleep 2
             $attempt++
             try {
-                docker exec compair_scraper curl -f http://localhost:3000/health 2>&1 | Out-Null
+                docker exec compair_scraper curl -f http://localhost:3001/health 2>&1 | Out-Null
                 $scraperReady = $true
             } catch {
                 $scraperReady = $false
@@ -214,18 +214,18 @@ if ($INCLUDE_WORKER) {
 
 if ($INCLUDE_SCRAPER) {
     Write-Host "🕷️  Scraping Services:"
-    Write-Host "   🌐 Node.js Scraper: http://localhost:3000"
+    Write-Host "   🌐 Node.js Scraper: http://localhost:3001"
 }
 
 if ($INCLUDE_FRONTEND) {
     Write-Host "🎨 Frontend Services:"
-    Write-Host "   💻 Next.js App: http://localhost:3001"
+    Write-Host "   💻 Next.js App: http://localhost:3002"
 }
 
 if ($INCLUDE_MONITOR) {
     Write-Host "📊 Monitoring Services:"
     Write-Host "   📈 Prometheus: http://localhost:9090"
-    Write-Host "   📉 Grafana: http://localhost:3002 (admin/admin)"
+    Write-Host "   📉 Grafana: http://localhost:3003 (admin/admin)"
 }
 
 Write-Host ""

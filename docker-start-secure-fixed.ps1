@@ -34,29 +34,42 @@ function Test-Prerequisites {
         exit 1
     }
     
-    # Check secrets
+    # Check .env file
+    if (-not (Test-Path ".env")) {
+        Write-Host "   ❌ .env file not found. This is required for secure operation." -ForegroundColor Red
+        Write-Host "   Please create .env file with required environment variables:" -ForegroundColor Yellow
+        Write-Host "     DATABASE_URL, REDIS_URL, SECRET_KEY, etc." -ForegroundColor Gray
+        exit 1
+    } else {
+        Write-Host "   ✅ .env file found" -ForegroundColor Green
+    }
+    
+    # Check required secrets directory
+    if (-not (Test-Path "secrets")) {
+        Write-Host "   ❌ secrets/ directory not found." -ForegroundColor Red
+        Write-Host "   Run setup-docker-security.ps1 first to generate required secrets." -ForegroundColor Yellow
+        exit 1
+    } else {
+        Write-Host "   ✅ secrets/ directory exists" -ForegroundColor Green
+    }
+    
+    # Check critical secret files
     $requiredSecrets = @("db_password.txt", "secret_key.txt", "redis_password.txt")
     $missingSecrets = @()
     
     foreach ($secret in $requiredSecrets) {
-        if (-not (Test-Path "secrets\$secret")) {
+        $secretPath = "secrets/$secret"
+        if (-not (Test-Path $secretPath)) {
             $missingSecrets += $secret
         }
     }
     
     if ($missingSecrets.Count -gt 0) {
-        Write-Host "   ❌ Missing secrets: $($missingSecrets -join ', ')" -ForegroundColor Red
-        Write-Host "   Run: .\setup-docker-security.ps1" -ForegroundColor Yellow
+        Write-Host "   ❌ Missing required secrets: $($missingSecrets -join ', ')" -ForegroundColor Red
+        Write-Host "   Run setup-docker-security.ps1 to generate missing secrets." -ForegroundColor Yellow
         exit 1
-    }
-    
-    Write-Host "   ✅ All secrets present" -ForegroundColor Green
-    
-    # Check .env file
-    if (-not (Test-Path ".env")) {
-        Write-Host "   ⚠️ .env file not found, using defaults" -ForegroundColor Yellow
     } else {
-        Write-Host "   ✅ Environment configuration found" -ForegroundColor Green
+        Write-Host "   ✅ All required secrets present" -ForegroundColor Green
     }
 }
 

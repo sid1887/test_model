@@ -2,7 +2,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const { RateLimiterRedis } = require('rate-limiter-flexible');
+// const { RateLimiterRedis } = require('rate-limiter-flexible'); // TODO: Implement Redis rate limiting
 require('dotenv').config();
 
 const logger = require('../utils/logger');
@@ -12,7 +12,7 @@ const WebScraper = require('../scraper/WebScraper');
 class ScraperAPI {
   constructor() {
     this.app = express();
-    this.port = process.env.PORT || 3000;
+    this.port = process.env.PORT || 3001;
     this.scraper = new WebScraper();
     this.setupMiddleware();
     this.setupRoutes();
@@ -22,7 +22,7 @@ class ScraperAPI {
   setupMiddleware() {
     // Security middleware
     this.app.use(helmet());
-    
+
     // CORS
     this.app.use(cors({
       origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
@@ -43,7 +43,7 @@ class ScraperAPI {
         retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60000) / 1000)
       },
       standardHeaders: true,
-      legacyHeaders: false,
+      legacyHeaders: false
     });
 
     this.app.use('/api/', limiter);
@@ -61,7 +61,7 @@ class ScraperAPI {
       try {
         const redisStatus = redisClient.getStatus();
         const scraperStats = this.scraper.getStats();
-        
+
         res.json({
           status: 'healthy',
           timestamp: new Date().toISOString(),
@@ -254,7 +254,7 @@ class ScraperAPI {
         });
 
         const results = await Promise.all(scrapingPromises);
-        
+
         // Flatten and format results
         const allProducts = [];
         const metadata = {
@@ -297,7 +297,7 @@ class ScraperAPI {
       try {
         const { key } = req.params;
         const data = await redisClient.get(`scraper:${key}`);
-        
+
         if (!data) {
           return res.status(404).json({
             error: 'Data not found in cache',
@@ -324,7 +324,7 @@ class ScraperAPI {
       try {
         const { pattern = 'scraper:*' } = req.query;
         const keys = await redisClient.getKeys(pattern);
-        
+
         if (keys.length > 0) {
           for (const key of keys) {
             await redisClient.del(key);
@@ -401,55 +401,55 @@ class ScraperAPI {
   // Helper method to extract products from scraped data
   extractProductsFromData(data, site) {
     const products = [];
-    
+
     try {
       // If we have HTML content, parse it with Cheerio
       if (data.html) {
         const cheerio = require('cheerio');
         const $ = cheerio.load(data.html);
         const selectors = this.getSelectorsForSite(site);
-        
+
         $(selectors.products).each((i, element) => {
           if (i >= 10) return false; // Limit to 10 products per site
-          
+
           const $item = $(element);
           const title = $item.find(selectors.title).first().text().trim();
           const priceText = $item.find(selectors.price).first().text().trim();
           const imageUrl = $item.find(selectors.image).first().attr('src') || '';
           const link = $item.find(selectors.link).first().attr('href') || '';
-          
+
           if (title && priceText) {            products.push({
-              title,
-              price: priceText,
-              image: imageUrl,
-              link: this.normalizeUrl(link, site),
-              site,
-              timestamp: new Date().toISOString()
-            });
+            title,
+            price: priceText,
+            image: imageUrl,
+            link: this.normalizeUrl(link, site),
+            site,
+            timestamp: new Date().toISOString()
+          });
           }
         });
       }
     } catch (error) {
       logger.error(`Error extracting products for ${site}:`, error);
     }
-    
+
     return products;
   }
 
   // Helper method to normalize URLs
   normalizeUrl(url, site) {
     if (!url) return '';
-    
+
     if (url.startsWith('http')) {
       return url;
     }
-    
+
     const baseDomains = {
       amazon: 'https://www.amazon.com',
       walmart: 'https://www.walmart.com',
       ebay: 'https://www.ebay.com'
     };
-      const baseDomain = baseDomains[site] || '';
+    const baseDomain = baseDomains[site] || '';
     return url.startsWith('/') ? `${baseDomain}${url}` : `${baseDomain}/${url}`;
   }
 
@@ -462,12 +462,10 @@ class ScraperAPI {
         method: req.method,
         timestamp: new Date().toISOString()
       });
-    });
-
-    // Global error handler
-    this.app.use((error, req, res, next) => {
+    });    // Global error handler
+    this.app.use((error, req, res, _next) => {
       logger.error('Unhandled error:', error);
-      
+
       res.status(error.status || 500).json({
         error: error.message || 'Internal server error',
         timestamp: new Date().toISOString(),
@@ -480,7 +478,7 @@ class ScraperAPI {
     try {
       // Connect to Redis
       await redisClient.connect();
-      
+
       // Start the server
       this.server = this.app.listen(this.port, () => {
         logger.info(`Scraper API server running on port ${this.port}`);
@@ -508,7 +506,7 @@ class ScraperAPI {
 
   async shutdown() {
     logger.info('Shutting down server...');
-    
+
     try {
       // Close HTTP server
       if (this.server) {

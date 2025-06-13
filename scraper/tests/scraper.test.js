@@ -30,7 +30,7 @@ describe('WebScraper', () => {
     it('should initialize with default options', () => {
       const defaultScraper = new WebScraper();
       const stats = defaultScraper.getStats();
-      
+
       expect(stats).toHaveProperty('totalRequests', 0);
       expect(stats).toHaveProperty('successfulRequests', 0);
       expect(stats).toHaveProperty('failedRequests', 0);
@@ -41,7 +41,7 @@ describe('WebScraper', () => {
         maxConcurrent: 10,
         timeout: 5000
       });
-      
+
       expect(customScraper.maxConcurrent).toBe(10);
       expect(customScraper.timeout).toBe(5000);
     });
@@ -50,7 +50,7 @@ describe('WebScraper', () => {
   describe('scrapeWithCheerio', () => {
     it('should scrape a simple HTML page', async () => {
       const result = await scraper.scrapeWithCheerio('https://httpbin.org/html');
-      
+
       expect(result).toHaveProperty('success', true);
       expect(result).toHaveProperty('url', 'https://httpbin.org/html');
       expect(result).toHaveProperty('data');
@@ -65,7 +65,7 @@ describe('WebScraper', () => {
           heading: 'h1'
         }
       });
-      
+
       expect(result.data).toHaveProperty('title');
       expect(result.data).toHaveProperty('heading');
       expect(typeof result.data.title).toBe('string');
@@ -74,27 +74,27 @@ describe('WebScraper', () => {
     it('should handle multiple elements', async () => {
       const result = await scraper.scrapeWithCheerio('https://httpbin.org/html', {
         selectors: {
-          paragraphs: { 
-            selector: 'p', 
-            multiple: true 
+          paragraphs: {
+            selector: 'p',
+            multiple: true
           }
         }
       });
-      
+
       expect(Array.isArray(result.data.paragraphs)).toBe(true);
     }, 15000);
 
     it('should handle attributes', async () => {
       const result = await scraper.scrapeWithCheerio('https://httpbin.org/html', {
         selectors: {
-          links: { 
-            selector: 'a', 
+          links: {
+            selector: 'a',
             attribute: 'href',
-            multiple: true 
+            multiple: true
           }
         }
       });
-      
+
       expect(Array.isArray(result.data.links)).toBe(true);
     }, 15000);
   });
@@ -106,7 +106,7 @@ describe('WebScraper', () => {
           title: 'title'
         }
       });
-      
+
       expect(result).toHaveProperty('success', true);
       expect(result).toHaveProperty('url', 'https://httpbin.org/html');
       expect(result.data).toHaveProperty('title');
@@ -119,7 +119,7 @@ describe('WebScraper', () => {
           title: 'title'
         }
       });
-      
+
       expect(result).toHaveProperty('success', true);
       expect(result.data).toHaveProperty('title');
     }, 30000);
@@ -133,7 +133,7 @@ describe('WebScraper', () => {
           title: 'title'
         }
       });
-      
+
       expect(result).toHaveProperty('success', true);
       expect(result.data).toHaveProperty('title');
     }, 20000);
@@ -151,14 +151,14 @@ describe('WebScraper', () => {
         'https://httpbin.org/html',
         'https://httpbin.org/json'
       ];
-      
+
       const result = await scraper.scrapeConcurrently(urls, {
         usePuppeteer: false,
         selectors: {
           title: 'title'
         }
       });
-      
+
       expect(result).toHaveProperty('results');
       expect(result).toHaveProperty('summary');
       expect(result.summary.total).toBe(2);
@@ -170,11 +170,11 @@ describe('WebScraper', () => {
         'https://httpbin.org/html',
         'https://definitely-not-a-real-url-12345.com'
       ];
-      
+
       const result = await scraper.scrapeConcurrently(urls, {
         usePuppeteer: false
       });
-      
+
       expect(result.summary.total).toBe(2);
       expect(result.summary.successful).toBeGreaterThan(0);
       expect(result.summary.failed).toBeGreaterThan(0);
@@ -190,13 +190,13 @@ describe('WebScraper', () => {
 
     it('should cache scraped results', async () => {
       const url = 'https://httpbin.org/html';
-      
+
       // First scrape - should cache
       await scraper.scrapeWithRetry(url, {
         cache: true,
         usePuppeteer: false
       });
-      
+
       // Check if result is cached
       const cachedResult = await scraper.getCachedResult(url);
       expect(cachedResult).not.toBeNull();
@@ -206,11 +206,11 @@ describe('WebScraper', () => {
     it('should retrieve cached results', async () => {
       const url = 'https://httpbin.org/html';
       const testData = { test: 'cached data' };
-      
+
       // Manually set cache
       const cacheKey = `scraper:${Buffer.from(url).toString('base64')}`;
       await redisClient.set(cacheKey, testData);
-      
+
       // Retrieve cached result
       const cachedResult = await scraper.getCachedResult(url);
       expect(cachedResult).toEqual(testData);
@@ -221,12 +221,12 @@ describe('WebScraper', () => {
     it('should track statistics correctly', async () => {
       const initialStats = scraper.getStats();
       expect(initialStats.totalRequests).toBe(0);
-      
+
       // Perform a successful scrape
       await scraper.scrapeWithRetry('https://httpbin.org/html', {
         usePuppeteer: false
       });
-      
+
       const finalStats = scraper.getStats();
       expect(finalStats.totalRequests).toBe(1);
       expect(finalStats.successfulRequests).toBe(1);
@@ -240,7 +240,7 @@ describe('WebScraper', () => {
       } catch (error) {
         // Expected to fail
       }
-      
+
       const stats = scraper.getStats();
       expect(stats.failedRequests).toBeGreaterThan(0);
     }, 15000);
@@ -249,18 +249,18 @@ describe('WebScraper', () => {
   describe('Rate Limiting', () => {
     it('should apply rate limiting', async () => {
       const startTime = Date.now();
-      
+
       // Make two requests to the same domain
       const promises = [
         scraper.scrapeWithCheerio('https://httpbin.org/html'),
         scraper.scrapeWithCheerio('https://httpbin.org/json')
       ];
-      
+
       await Promise.all(promises);
-      
+
       const endTime = Date.now();
       const duration = endTime - startTime;
-      
+
       // Should take at least 1 second due to rate limiting
       expect(duration).toBeGreaterThan(1000);
     }, 25000);
@@ -275,11 +275,11 @@ describe('WebScraper', () => {
 
     it('should handle network timeouts', async () => {
       const timeoutScraper = new WebScraper({ timeout: 1 }); // 1ms timeout
-      
+
       await expect(
         timeoutScraper.scrapeWithCheerio('https://httpbin.org/delay/5')
       ).rejects.toThrow();
-      
+
       await timeoutScraper.cleanup();
     }, 10000);
   });

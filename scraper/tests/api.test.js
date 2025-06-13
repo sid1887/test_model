@@ -10,10 +10,10 @@ describe('Scraper API', () => {
     // Create API instance for testing
     const api = new ScraperAPI();
     app = api.app;
-    
+
     // Connect to Redis for testing
     await redisClient.connect();
-    
+
     // Start server on test port
     server = app.listen(0); // Use random available port
   });
@@ -59,10 +59,10 @@ describe('Scraper API', () => {
   describe('POST /api/scrape', () => {
     it('should scrape a valid URL', async () => {
       const testUrl = 'https://httpbin.org/html';
-      
+
       const response = await request(app)
         .post('/api/scrape')
-        .send({ 
+        .send({
           url: testUrl,
           options: {
             usePuppeteer: false,
@@ -100,11 +100,11 @@ describe('Scraper API', () => {
 
     it('should use cached result when available', async () => {
       const testUrl = 'https://httpbin.org/html';
-      
+
       // First request - should scrape and cache
       const firstResponse = await request(app)
         .post('/api/scrape')
-        .send({ 
+        .send({
           url: testUrl,
           options: { cache: true }
         })
@@ -116,7 +116,7 @@ describe('Scraper API', () => {
       // Second request - should return cached result
       const secondResponse = await request(app)
         .post('/api/scrape')
-        .send({ 
+        .send({
           url: testUrl,
           options: { cache: true }
         })
@@ -132,10 +132,10 @@ describe('Scraper API', () => {
         'https://httpbin.org/html',
         'https://httpbin.org/json'
       ];
-      
+
       const response = await request(app)
         .post('/api/scrape/batch')
-        .send({ 
+        .send({
           urls,
           options: {
             usePuppeteer: false,
@@ -163,7 +163,7 @@ describe('Scraper API', () => {
 
     it('should return error for too many URLs', async () => {
       const urls = new Array(51).fill('https://httpbin.org/html');
-      
+
       const response = await request(app)
         .post('/api/scrape/batch')
         .send({ urls })
@@ -199,7 +199,7 @@ describe('Scraper API', () => {
     it('should clear cache', async () => {
       // Add some test data to cache
       await redisClient.set('scraper:test', { test: 'data' });
-      
+
       const response = await request(app)
         .delete('/api/cache')
         .expect(200);

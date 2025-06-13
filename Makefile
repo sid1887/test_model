@@ -3,7 +3,7 @@
 
 # Detect the operating system
 ifeq ($(OS),Windows_NT)
-    SHELL := powershell.exe
+    SHELL := powersh	@echo "   Scraper:      http://localhost:3001"ll.exe
     START_SCRIPT := .\scripts\start-all.ps1
     .SHELLFLAGS := -Command
 else
@@ -153,7 +153,7 @@ ifeq ($(OS),Windows_NT)
 	@Write-Host "Service URLs (when running):" -ForegroundColor Green
 	@Write-Host "   Main App:     http://localhost:8000"
 	@Write-Host "   API Docs:     http://localhost:8000/docs"
-	@Write-Host "   Scraper:      http://localhost:3000"
+	@Write-Host "   Scraper:      http://localhost:3001"
 	@Write-Host "   Frontend:     http://localhost:3001"
 	@Write-Host "   Flower:       http://localhost:5555"
 	@Write-Host "   Grafana:      http://localhost:3002"
@@ -175,7 +175,7 @@ else
 	@echo "Service URLs (when running):"
 	@echo "   Main App:     http://localhost:8000"
 	@echo "   API Docs:     http://localhost:8000/docs"
-	@echo "   Scraper:      http://localhost:3000"
+	@echo "   Scraper:      http://localhost:3001"
 	@echo "   Frontend:     http://localhost:3001"
 	@echo "   Flower:       http://localhost:5555"
 	@echo "   Grafana:      http://localhost:3002"

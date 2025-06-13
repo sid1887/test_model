@@ -36,7 +36,6 @@ scrapy==2.11.0
 playwright==1.40.0
 playwright-stealth==1.0.6
 requests==2.31.0
-aiohttp==3.9.1
 beautifulsoup4==4.12.2
 fake-useragent==1.4.0
 selenium==4.15.2
@@ -47,7 +46,7 @@ asyncio-throttle==1.0.2
 
 # Proxy & Rate Management
 aiohttp-socks==0.8.4
-python-socks==2.0.3
+python-socks==2.4.3
 
 # CAPTCHA Solving
 pytesseract==0.3.10

@@ -162,7 +162,7 @@ Write-Host "---------------------------" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Health Checks:" -ForegroundColor White
 Write-Host "curl http://localhost:8000/api/v1/health   # Backend API" -ForegroundColor Cyan
-Write-Host "curl http://localhost:3000/health          # Scraper Service" -ForegroundColor Cyan
+Write-Host "curl http://localhost:3001/health          # Scraper Service" -ForegroundColor Cyan
 Write-Host "curl http://localhost:9001/health          # CAPTCHA Service" -ForegroundColor Cyan
 Write-Host "curl http://localhost:8001/health          # Proxy Service" -ForegroundColor Cyan
 
