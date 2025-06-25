@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile following testdriven.io best practices
 # Stage 1: Build dependencies and compile wheels
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Set build arguments
 ARG BUILDPLATFORM
@@ -46,7 +46,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 RUN playwright install chromium
 
 # Stage 2: Production image
-FROM python:3.11-slim as production
+FROM python:3.11-slim AS production
 
 # Set labels for better maintenance
 LABEL maintainer="Cumpair Team"

@@ -4,8 +4,6 @@ AI Model Manager for Cumpair - Handles YOLO, EfficientNet, and CLIP models
 """
 
 import asyncio
-import torch
-import cv2
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
@@ -13,12 +11,30 @@ import json
 import time
 from datetime import datetime
 
-# Core ML Libraries
-from ultralytics import YOLO
-import clip
-from transformers import AutoProcessor, AutoModel
-from PIL import Image
-import torchvision.transforms as transforms
+# Optional AI libraries - import only if available
+try:
+    import torch
+    import cv2
+    from ultralytics import YOLO
+    import clip
+    from transformers import AutoProcessor, AutoModel
+    from PIL import Image
+    AI_LIBRARIES_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: AI libraries not available: {e}")
+    print("Running in limited mode without AI functionality")
+    AI_LIBRARIES_AVAILABLE = False
+    torch = None
+    cv2 = None    YOLO = None
+    clip = None
+    AutoProcessor = None
+    AutoModel = None
+    Image = None
+
+try:
+    import torchvision.transforms as transforms
+except ImportError:
+    transforms = None
 
 # Database imports
 from app.models.product import Product

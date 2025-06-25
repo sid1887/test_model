@@ -1,50 +1,91 @@
-version: '3.8'
+version: '3.9'
 
 services:
   # Redis for Celery broker and caching
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 30s
+    networks:
+      - backend
+      - monitoring
 
   # PostgreSQL database
   postgres:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: compair
       POSTGRES_USER: compair
-      POSTGRES_PASSWORD: compair123
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256" 
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    secrets:
+      - postgres_password
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U compair"]
+      test: ["CMD-SHELL", "pg_isready -U compair -d compair"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
 
   # Main FastAPI web application (Backend API)
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - PIP_TIMEOUT=2000
+        - PIP_RETRIES=10
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
+      - DATABASE_URL=postgresql://compair@postgres:5432/compair
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - SCRAPER_SERVICE_URL=http://scraper:3001
       - CAPTCHA_SERVICE_URL=http://captcha:9001
       - PROXY_SERVICE_URL=http://proxy:8001
+      - PYTHONUNBUFFERED=1
+      - COMPOSE_HTTP_TIMEOUT=1800
+      - DOCKER_CLIENT_TIMEOUT=1800
+    env_file:
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,15 +95,34 @@ services:
       - ./uploads:/app/uploads
       - ./models:/app/models
       - ./logs:/app/logs
+      - web_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
+      timeout: 20s
+      retries: 5
+      start_period: 120s
+    networks:
+      - frontend
+      - backend
+      - monitoring
+
   # Node.js scraper microservice
   scraper:
     build:
       context: ./scraper
+      dockerfile: Dockerfile
+      args:
+        - NODE_OPTIONS=--max_old_space_size=2048
+    restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
@@ -71,43 +131,80 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - SCRAPER_PORT=3001
+      - NODE_OPTIONS=--max_old_space_size=2048
     depends_on:
       redis:
         condition: service_healthy
     volumes:
       - ./scraper/logs:/app/logs
+      - scraper_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '1.5'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
+      timeout: 20s
+      retries: 5
+      start_period: 60s
+    networks:
+      - frontend
+      - backend
 
   # Frontend application (React/Vite)
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NODE_OPTIONS=--max_old_space_size=4096
+        - VITE_BUILD_TIMEOUT=600000
+    restart: unless-stopped
     ports:
       - "8080:3000"
     environment:
       - VITE_API_URL=http://localhost:8000
       - VITE_SCRAPER_URL=http://localhost:3001
+      - NODE_OPTIONS=--max_old_space_size=4096
     depends_on:
-      - web
-      - scraper
+      web:
+        condition: service_started
+      scraper:
+        condition: service_started
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
+      - ./frontend/dist:/app/dist
+      - frontend_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-
+      timeout: 20s
+      retries: 5
+      start_period: 180s
+    networks:
+      - frontend
   # CAPTCHA solving service
   captcha:
     build:
       context: ./captcha-service
       dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - PIP_TIMEOUT=2000
+        - PIP_RETRIES=10
+    restart: unless-stopped
     ports:
       - "9001:9001"
     environment:
@@ -118,17 +215,33 @@ services:
         condition: service_healthy
     volumes:
       - ./captcha-service/logs:/app/logs
+      - captcha_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-
+      timeout: 20s
+      retries: 5
+      start_period: 45s
+    networks:
+      - backend
   # Proxy management service
   proxy:
     build:
       context: ./proxy-service
       dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - PIP_TIMEOUT=2000
+        - PIP_RETRIES=10
+    restart: unless-stopped
     ports:
       - "8001:8001"
     environment:
@@ -139,53 +252,104 @@ services:
         condition: service_healthy
     volumes:
       - ./proxy-service/logs:/app/logs
-      - ./proxy-service/config:/app/config
+      - ./proxy-service/config:/app/config:ro
+      - proxy_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
+      timeout: 20s
+      retries: 5
+      start_period: 45s
+    networks:
+      - backend
 
   # Celery worker for background tasks
   worker:
-    build: .
-    command: celery -A app.worker worker --loglevel=info
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A app.worker worker --loglevel=info --concurrency=4 --max-tasks-per-child=1000
     environment:
-      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
+      - DATABASE_URL=postgresql://compair@postgres:5432/compair
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
     depends_on:
-      - web
+      web:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./uploads:/app/uploads
       - ./models:/app/models
       - ./logs:/app/logs
+      - worker_cache:/app/.cache
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '2.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    networks:
+      - backend
 
   # Celery Flower monitoring
   flower:
-    build: .
-    command: celery -A app.worker flower --port=5555
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A app.worker flower --port=5555 --broker=redis://redis:6379/0
     ports:
       - "5555:5555"
     environment:
-      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
+      - DATABASE_URL=postgresql://compair@postgres:5432/compair
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
-      - worker
+      worker:
+        condition: service_started
+      redis:
+        condition: service_healthy
     volumes:
       - ./logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5555"]
       interval: 30s
-      timeout: 10s
-      retries: 3
+      timeout: 20s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend
+      - monitoring
 
   # Prometheus monitoring
   prometheus:
     image: prom/prometheus:latest
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
@@ -197,55 +361,136 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
       interval: 30s
-      timeout: 10s
-      retries: 3
-
+      timeout: 15s
+      retries: 5
+      start_period: 30s
+    networks:
+      - monitoring
   # Grafana dashboard
   grafana:
     image: grafana/grafana:latest
+    restart: unless-stopped
     ports:
       - "3002:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_PASSWORD_FILE=/run/secrets/grafana_password
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=redis-datasource
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana:/etc/grafana/provisioning:ro
+    secrets:
+      - grafana_password
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
+      timeout: 15s
+      retries: 5
+      start_period: 45s
+    networks:
+      - monitoring
 
-  # nginx reverse proxy (optional load balancer)
+  # nginx reverse proxy and load balancer
   nginx:
     image: nginx:alpine
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
     depends_on:
-      - web
-      - frontend
+      web:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
+      timeout: 15s
+      retries: 5
+      start_period: 30s
+    networks:
+      - frontend
 
+# Secrets management for production security
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  grafana_password:
+    file: ./secrets/grafana_password.txt
+
+# Named volumes for data persistence
 volumes:
   redis_data:
+    driver: local
   postgres_data:
+    driver: local
   prometheus_data:
+    driver: local
   grafana_data:
+    driver: local
+  web_cache:
+    driver: local
+  worker_cache:
+    driver: local
+  scraper_cache:
+    driver: local
+  frontend_cache:
+    driver: local
+  captcha_cache:
+    driver: local
+  proxy_cache:
+    driver: local
 
+# Network segmentation for security
 networks:
-  default:
+  frontend:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  backend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+  monitoring:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16

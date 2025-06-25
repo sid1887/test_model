@@ -218,7 +218,8 @@ class CaptchaSolver:
         self.self_hosted_endpoint = None
         self.ocr_engines = {}
         self._init_captcha_services()
-      def _init_captcha_services(self):
+    
+    def _init_captcha_services(self):
         """Initialize available CAPTCHA solving services"""
         # Check for self-hosted 2captcha-compatible service
         self_hosted_url = getattr(settings, 'captcha_service_url', None)

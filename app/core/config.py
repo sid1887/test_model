@@ -2,8 +2,8 @@
 Core configuration settings for Compair application
 """
 
-from pydantic_settings import BaseSettings
 from pydantic import field_validator
+from pydantic_settings import BaseSettings
 from typing import Optional, List, Union
 import os
 

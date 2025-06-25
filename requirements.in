@@ -1,0 +1,91 @@
+# ================================
+# TOP-LEVEL REQUIREMENTS ONLY
+# pip-compile will resolve all sub-dependencies
+# ================================
+
+# Core Framework
+fastapi>=0.95.0,<1.0.0
+uvicorn[standard]>=0.20.0
+pydantic>=1.10.0,<2.0.0  # Force v1 ecosystem
+python-dotenv>=1.0.0
+typing-extensions>=4.5.0
+
+# Web Framework
+flask>=2.3.0
+gunicorn>=21.0.0
+
+# Task Queue
+celery>=5.3.0
+flower>=2.0.0
+redis>=5.0.0,<6.0.0
+
+# Database
+sqlalchemy>=1.4.0,<2.0.0
+alembic>=1.12.0
+asyncpg>=0.29.0
+psycopg2-binary>=2.9.0
+
+# Image Processing & AI
+ultralytics>=8.0.0
+opencv-python-headless>=4.8.0
+tensorflow>=2.12.0,<2.16.0  # Pin TF to compatible range
+torch>=2.0.0,<3.0.0
+torchvision>=0.15.0
+Pillow>=10.0.0
+numpy>=1.20.0,<1.24.0  # Critical: TF constraint
+imgaug>=0.4.0
+
+# CLIP
+openai-clip>=1.0.0
+
+# NLP & Transformers
+transformers>=4.30.0
+sentence-transformers>=2.2.0
+huggingface-hub>=0.16.0
+faiss-cpu>=1.7.0
+
+# Web Scraping
+scrapy>=2.10.0
+playwright>=1.39.0
+playwright-stealth>=1.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+fake-useragent>=1.4.0
+selenium>=4.15.0
+
+# Enhanced Scraping
+easyocr>=1.7.0
+asyncio-throttle>=1.0.0
+
+# Proxy & Rate Management
+aiohttp-socks>=0.8.0
+python-socks>=2.4.0
+
+# CAPTCHA
+pytesseract>=0.3.0
+
+# Configuration
+pyyaml>=6.0.0
+
+# Monitoring
+prometheus-client>=0.19.0
+structlog>=23.2.0
+
+# Data Science
+pandas>=2.0.0
+scikit-learn>=1.3.0
+scipy>=1.10.0
+prophet>=1.1.0
+
+# NLP
+textblob>=0.17.0
+vaderSentiment>=3.3.0
+wordcloud>=1.9.0
+
+# Utilities
+python-multipart>=0.0.6
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.0
+aiofiles>=23.2.0
+httpx>=0.25.0
+aiohttp>=3.9.0

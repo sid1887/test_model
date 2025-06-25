@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for Scraper Service Production
-FROM node:18-alpine as builder
+FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -27,7 +27,7 @@ COPY . .
 RUN npm prune --only=production
 
 # Stage 2: Production runtime
-FROM node:18-alpine as production
+FROM node:18-alpine AS production
 
 # Create app user for security
 RUN addgroup -g 1001 -S nodejs && \

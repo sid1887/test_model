@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  web:
+    volumes:
+      - ./phase2_step1_health_fix.sh:/app/phase2_step1_health_fix.sh
+    command: >
+      bash -c "
+      chmod +x /app/phase2_step1_health_fix.sh &&
+      /app/phase2_step1_health_fix.sh &&
+      exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1 --reload
+      "

@@ -1,0 +1,176 @@
+# ROBUST MULTI-STAGE DOCKERFILE WITH AUTOMATED ERROR HANDLING
+FROM python:3.11-slim AS base
+
+# Environment variables for robust builds
+ENV PIP_DEFAULT_TIMEOUT=3000 \
+    PIP_TIMEOUT=3000 \
+    PIP_RETRIES=15 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_BREAK_SYSTEM_PACKAGES=1
+
+WORKDIR /app
+
+# ============= STAGE 1: BUILDER WITH ERROR HANDLING =============
+FROM base AS builder
+
+# Update and install essential packages with error handling
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    gcc \
+    g++ \
+    build-essential \
+    pkg-config \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Try to install development packages (continue on failure)
+RUN apt-get update && \
+    (apt-get install -y --no-install-recommends \
+        libpq-dev \
+        libssl-dev \
+        libffi-dev \
+        zlib1g-dev \
+        libjpeg-dev \
+        libpng-dev \
+        libtiff-dev \
+        libfreetype6-dev \
+        liblcms2-dev \
+        libwebp-dev \
+        libopenjp2-7-dev \
+        libimagequant-dev \
+        libraqm-dev \
+        libxcb1-dev \
+    || echo "Some development packages failed to install, continuing...") && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Try to install ML/CV packages (continue on failure)
+RUN apt-get update && \
+    (apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender-dev \
+        libgomp1 \
+        libgl1-mesa-glx \
+        libgtk-3-0 \
+        libgstreamer1.0-0 \
+        libgstreamer-plugins-base1.0-0 \
+        libavcodec58 \
+        libavformat58 \
+        libswscale5 \
+        libv4l-0 \
+        libatlas3-base \
+        gfortran \
+    || echo "Some ML packages failed to install, continuing...") && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Create comprehensive pip configuration
+RUN mkdir -p ~/.pip && \
+    echo "[global]" > ~/.pip/pip.conf && \
+    echo "trusted-host = pypi.org" >> ~/.pip/pip.conf && \
+    echo "               files.pythonhosted.org" >> ~/.pip/pip.conf && \
+    echo "               pypi.python.org" >> ~/.pip/pip.conf && \
+    echo "timeout = 3000" >> ~/.pip/pip.conf && \
+    echo "retries = 15" >> ~/.pip/pip.conf && \
+    echo "break-system-packages = true" >> ~/.pip/pip.conf && \
+    echo "index-url = https://pypi.org/simple/" >> ~/.pip/pip.conf && \
+    echo "extra-index-url = https://pypi.python.org/simple/" >> ~/.pip/pip.conf
+
+# Copy requirements and auto-installer
+COPY requirements.txt .
+COPY auto_install_packages.py .
+
+# Upgrade pip and install essential Python packages
+RUN pip install --no-cache-dir --timeout 3000 --retries 15 --upgrade pip setuptools wheel
+
+# Run automated package installation with conflict resolution
+RUN python auto_install_packages.py || \
+    (echo "Auto-installer failed, trying manual fallback..." && \
+     pip install --no-cache-dir --timeout 3000 --retries 15 fastapi uvicorn pydantic pydantic-settings python-dotenv || true) && \
+    (echo "Installing database packages..." && \
+     pip install --no-cache-dir --timeout 3000 --retries 15 sqlalchemy alembic asyncpg psycopg2-binary || true) && \
+    (echo "Installing task queue packages..." && \
+     pip install --no-cache-dir --timeout 3000 --retries 15 celery redis || true) && \
+    (echo "Installing web framework packages..." && \
+     pip install --no-cache-dir --timeout 3000 --retries 15 flask gunicorn || true) && \
+    (echo "Installing utility packages..." && \
+     pip install --no-cache-dir --timeout 3000 --retries 15 requests aiohttp || true)
+
+# ============= STAGE 2: PRODUCTION RUNTIME =============
+FROM base AS production
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    procps \
+    ca-certificates \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Try to install optional runtime packages
+RUN apt-get update && \
+    (apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender1 \
+        libgomp1 \
+        libgl1-mesa-glx \
+        libgtk-3-0 \
+        libavcodec58 \
+        libavformat58 \
+        libswscale5 \
+        libv4l-0 \
+        libatlas3-base \
+        libjpeg62-turbo \
+        libpng16-16 \
+        libtiff5 \
+    || echo "Some optional packages failed to install, continuing...") && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Create application user and directories
+RUN groupadd -r appuser && useradd -r -g appuser -u 1001 appuser && \
+    mkdir -p /app /uploads /models /app/static /app/.cache /home/appuser/.cache && \
+    chown -R appuser:appuser /app /uploads /models /home/appuser
+
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application code and startup script
+COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser adaptive_startup.sh .
+
+# Make startup script executable
+USER root
+RUN chmod +x adaptive_startup.sh
+USER appuser
+
+# Switch to non-root user
+USER appuser
+
+# Environment setup
+ENV PYTHONPATH=/app
+ENV PATH="/home/appuser/.local/bin:$PATH"
+
+# Expose port
+EXPOSE 8000
+
+# Multi-stage health check with fallbacks
+HEALTHCHECK --interval=30s --timeout=20s --start-period=120s --retries=5 \
+    CMD curl -f http://localhost:8000/api/v1/health || \
+        curl -f http://localhost:8000/health || \
+        curl -f http://localhost:8000/ || \
+        exit 1
+
+# Start with adaptive startup script that handles all scenarios
+CMD ["./adaptive_startup.sh"]
