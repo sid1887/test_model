@@ -1,0 +1,71 @@
+﻿[
+    {
+        "confidence":  0.95,
+        "name":  "Echo Dot",
+        "analysis_result":  {
+                                "url":  "https://www.amazon.com/dp/B08N5WRWNW",
+                                "analysis_type":  "ai_powered",
+                                "deep_analysis":  true,
+                                "include_images":  true,
+                                "result":  "Analysis completed successfully",
+                                "confidence":  0.95,
+                                "categories":  [
+                                                   "electronics",
+                                                   "mobile"
+                                               ],
+                                "features_detected":  [
+                                                          "high-resolution display",
+                                                          "wireless charging"
+                                                      ]
+                            },
+        "timestamp":  "2025-06-25 20:50:16",
+        "category":  "Electronics",
+        "url":  "https://www.amazon.com/dp/B08N5WRWNW"
+    },
+    {
+        "confidence":  0.95,
+        "name":  "Fire TV Stick",
+        "analysis_result":  {
+                                "url":  "https://www.amazon.com/dp/B08F7PTF53",
+                                "analysis_type":  "ai_powered",
+                                "deep_analysis":  true,
+                                "include_images":  true,
+                                "result":  "Analysis completed successfully",
+                                "confidence":  0.95,
+                                "categories":  [
+                                                   "electronics",
+                                                   "mobile"
+                                               ],
+                                "features_detected":  [
+                                                          "high-resolution display",
+                                                          "wireless charging"
+                                                      ]
+                            },
+        "timestamp":  "2025-06-25 20:50:16",
+        "category":  "Electronics",
+        "url":  "https://www.amazon.com/dp/B08F7PTF53"
+    },
+    {
+        "confidence":  0.95,
+        "name":  "Popular Book",
+        "analysis_result":  {
+                                "url":  "https://www.amazon.com/dp/B0B7RWBM1K",
+                                "analysis_type":  "ai_powered",
+                                "deep_analysis":  true,
+                                "include_images":  true,
+                                "result":  "Analysis completed successfully",
+                                "confidence":  0.95,
+                                "categories":  [
+                                                   "electronics",
+                                                   "mobile"
+                                               ],
+                                "features_detected":  [
+                                                          "high-resolution display",
+                                                          "wireless charging"
+                                                      ]
+                            },
+        "timestamp":  "2025-06-25 20:50:16",
+        "category":  "Books",
+        "url":  "https://www.amazon.com/dp/B0B7RWBM1K"
+    }
+]

@@ -1,0 +1,62 @@
+# COMPREHENSIVE DOCKERFILE WITH ALL FIXES
+FROM python:3.11-slim AS base
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PYTHONPATH=/app
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    git \
+    build-essential \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libglib2.0-0 \
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN python -m pip install --upgrade pip setuptools wheel
+
+# Copy requirements and install dependencies
+COPY requirements.txt /app/requirements.txt
+RUN pip install -r requirements.txt
+
+# Install additional critical packages
+RUN pip install asyncpg aiofiles psycopg2-binary python-multipart prometheus-client
+
+# Copy application code
+COPY . /app/
+
+# Copy fix scripts
+COPY fix_all_issues.py /app/fix_all_issues.py
+COPY robust_start.sh /app/robust_start.sh
+
+# Make scripts executable
+RUN chmod +x /app/robust_start.sh
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/uploads /app/models
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python /app/simple_health_check.py
+
+EXPOSE 8000
+
+# Use robust startup script
+CMD ["/app/robust_start.sh"]

@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  web:
+    volumes:
+      - ./universal_package_installer.py:/app/universal_package_installer.py
+      - ./start_web_with_installer.sh:/app/start_web_with_installer.sh
+      - ./fix_proxymanager_complete.sh:/app/fix_proxymanager_complete.sh
+      - ./fix_ai_models_syntax.sh:/app/fix_ai_models_syntax.sh
+      - ./products.py:/app/products.py
+    command: >
+      bash -c "
+      chmod +x /app/start_web_with_installer.sh &&
+      /app/start_web_with_installer.sh
+      "
+    environment:
+      - ENABLE_DATABASE=true
+      - ENABLE_PRICE_COMPARISON=true  
+      - ENABLE_PRODUCT_MANAGEMENT=true
+      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
+
+  worker:
+    volumes:
+      - ./universal_package_installer.py:/app/universal_package_installer.py
+      - ./start_worker_with_installer.sh:/app/start_worker_with_installer.sh
+    command: >
+      bash -c "
+      chmod +x /app/start_worker_with_installer.sh &&
+      /app/start_worker_with_installer.sh
+      "
+
+  flower:
+    volumes:
+      - ./universal_package_installer.py:/app/universal_package_installer.py
+      - ./start_flower_universal.sh:/app/start_flower_universal.sh
+    command: >
+      bash -c "
+      chmod +x /app/start_flower_universal.sh &&
+      /app/start_flower_universal.sh
+      "
+
+  scraper:
+    volumes:
+      - ./universal_package_installer.py:/app/universal_package_installer.py
+      - ./start_scraper_with_installer.sh:/app/start_scraper_with_installer.sh
+      - ./fix_proxymanager_complete.sh:/app/fix_proxymanager_complete.sh
+    command: >
+      bash -c "
+      chmod +x /app/start_scraper_with_installer.sh &&
+      /app/start_scraper_with_installer.sh
+      "
+
+  proxy:
+    volumes:
+      - ./universal_package_installer.py:/app/universal_package_installer.py
+      - ./start_proxy_with_installer.sh:/app/start_proxy_with_installer.sh
+    command: >
+      bash -c "
+      chmod +x /app/start_proxy_with_installer.sh &&
+      /app/start_proxy_with_installer.sh
+      "
+
+  captcha:
+    volumes:
+      - ./universal_package_installer.py:/app/universal_package_installer.py
+      - ./start_captcha_with_installer.sh:/app/start_captcha_with_installer.sh
+    command: >
+      bash -c "
+      chmod +x /app/start_captcha_with_installer.sh &&
+      /app/start_captcha_with_installer.sh
+      "

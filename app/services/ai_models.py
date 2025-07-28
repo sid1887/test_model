@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 """
-AI Model Manager for Cumpair - Handles YOLO, EfficientNet, and CLIP models
+AI Model Manager for Cum    def __init__(self):
+        # Start with CPU for stability, GPU will be used dynamically
+        self.device = "cpu"  
+        self.models_dir = Path("models")
+        self.models_dir.mkdir(exist_ok=True)
+        
+        # Log GPU availability only if AI libraries are available
+        if AI_LIBRARIES_AVAILABLE and torch is not None:
+            gpu_available = torch.cuda.is_available()
+            if gpu_available:
+                gpu_name = torch.cuda.get_device_name(0)
+                gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
+                print(f"🔥 AI Model Manager initialized - Primary: CPU, GPU Available: {gpu_name} ({gpu_memory:.1f}GB)")
+            else:
+                print(f"🔥 AI Model Manager initialized - CPU only mode")
+        else:
+            print(f"🔥 AI Model Manager initialized - AI libraries not available, running in limited mode") YOLO, EfficientNet, and CLIP models
 """
 
 import asyncio
@@ -25,7 +41,8 @@ except ImportError as e:
     print("Running in limited mode without AI functionality")
     AI_LIBRARIES_AVAILABLE = False
     torch = None
-    cv2 = None    YOLO = None
+    cv2 = None
+    YOLO = None
     clip = None
     AutoProcessor = None
     AutoModel = None
@@ -56,14 +73,17 @@ class ModelManager:
         self.models_dir = Path("models")
         self.models_dir.mkdir(exist_ok=True)
         
-        # Log GPU availability
-        gpu_available = torch.cuda.is_available()
-        if gpu_available:
-            gpu_name = torch.cuda.get_device_name(0)
-            gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
-            print(f"🔥 AI Model Manager initialized - Primary: CPU, GPU Available: {gpu_name} ({gpu_memory:.1f}GB)")
+        # Log GPU availability only if AI libraries are available
+        if AI_LIBRARIES_AVAILABLE and torch is not None:
+            gpu_available = torch.cuda.is_available()
+            if gpu_available:
+                gpu_name = torch.cuda.get_device_name(0)
+                gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
+                print(f"🔥 AI Model Manager initialized - Primary: CPU, GPU Available: {gpu_name} ({gpu_memory:.1f}GB)")
+            else:
+                print(f"🔥 AI Model Manager initialized - CPU only mode")
         else:
-            print(f"🔥 AI Model Manager initialized - CPU only mode")
+            print(f"🔥 AI Model Manager initialized - AI libraries not available, running in limited mode")
     
     async def initialize_models(self) -> bool:
         """Initialize all AI models asynchronously."""

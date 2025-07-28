@@ -1,0 +1,63 @@
+services:
+  # Redis for Celery broker and caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: compair
+      POSTGRES_USER: compair
+      POSTGRES_PASSWORD: compair123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U compair"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Main FastAPI web application
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
+      - REDIS_URL=redis://redis:6379
+      - PYTHONPATH=/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./fix_all_issues.py:/app/fix_all_issues.py
+      - ./robust_start.sh:/app/robust_start.sh
+    command: ["/app/robust_start.sh"]
+    healthcheck:
+      test: ["CMD", "python", "/app/simple_health_check.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  redis_data:
+  postgres_data:

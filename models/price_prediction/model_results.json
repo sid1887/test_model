@@ -1,0 +1,14 @@
+{
+  "model_type": "price_prediction",
+  "training_samples": 103,
+  "features": [
+    "category",
+    "rating",
+    "review_count"
+  ],
+  "accuracy": 0.887,
+  "trained_at": "2025-06-25T15:26:04.543748",
+  "model_version": "1.0",
+  "data_source": "real_amazon_products",
+  "status": "trained"
+}

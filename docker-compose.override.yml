@@ -1,12 +1,14 @@
-version: '3.9'
-
 services:
   web:
     volumes:
-      - ./phase2_step1_health_fix.sh:/app/phase2_step1_health_fix.sh
+      - ./universal_package_installer.py:/app/universal_package_installer.py
+    environment:
+      - SECRET_KEY=production-secret-key-2025-secure
+      - ENVIRONMENT=development
     command: >
       bash -c "
-      chmod +x /app/phase2_step1_health_fix.sh &&
-      /app/phase2_step1_health_fix.sh &&
-      exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1 --reload
+      echo 'Starting web service with package installer...' &&
+      python /app/universal_package_installer.py --individual-packages &&
+      echo 'Package installation completed. Starting FastAPI...' &&
+      exec uvicorn main:app --host 0.0.0.0 --port 8000 --reload
       "

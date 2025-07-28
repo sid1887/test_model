@@ -4,11 +4,24 @@ Implements zero-shot image-to-product matching using OpenAI CLIP
 Enhanced with automatic persistence, concurrency handling, and scalability optimizations
 """
 
-import torch
-import clip
+# Try to import AI libraries - fall back gracefully if not available
+try:
+    import torch
+    import clip
+    from sentence_transformers import SentenceTransformer
+    import faiss
+    CLIP_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: CLIP libraries not available: {e}")
+    print("Running in limited mode without CLIP functionality")
+    CLIP_AVAILABLE = False
+    torch = None
+    clip = None
+    SentenceTransformer = None
+    faiss = None
+
 import numpy as np
 from PIL import Image
-import faiss
 import pickle
 import os
 import logging
@@ -17,7 +30,6 @@ from pathlib import Path
 import asyncio
 import threading
 import time
-from sentence_transformers import SentenceTransformer
 import json
 
 from app.core.config import settings
@@ -27,6 +39,13 @@ class CLIPSearchService:
     """Enhanced CLIP-based semantic search with automatic persistence and optimization"""
     
     def __init__(self):
+        if not CLIP_AVAILABLE:
+            self.clip_available = False
+            self.device = "cpu"
+            print("🔄 CLIP service initialized in limited mode (CLIP libraries not available)")
+            return
+            
+        self.clip_available = True
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.clip_model = None
         self.clip_preprocess = None

@@ -3,7 +3,14 @@ Hybrid GPU/CPU Memory Management for AI Models
 Optimized for GT 710 (2GB VRAM) with intelligent device switching
 """
 
-import torch
+# Try to import torch - fall back gracefully if not available
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    TORCH_AVAILABLE = False
+
 import gc
 import logging
 from contextlib import contextmanager
@@ -60,7 +67,7 @@ class HybridGPUMemoryManager:
             memory_threshold: Memory usage threshold (0.0-1.0)
             cleanup_interval: Operations between cleanup cycles
         """
-        self.gpu_available = torch.cuda.is_available()
+        self.gpu_available = TORCH_AVAILABLE and torch.cuda.is_available() if torch else False
         self.device_stats = {
             "cuda": DeviceStats(),
             "cpu": DeviceStats()
@@ -94,6 +101,16 @@ class HybridGPUMemoryManager:
     
     def _analyze_gpu_capabilities(self) -> Dict[str, Any]:
         """Analyze GPU capabilities and set appropriate limits"""
+        if not TORCH_AVAILABLE or not torch:
+            return {
+                'error': 'PyTorch not available', 
+                'name': 'Unknown GPU', 
+                'total_memory_gb': 2.0,
+                'usable_memory_gb': 1.0,
+                'is_low_end': True,
+                'strategy': 'conservative'
+            }
+            
         try:
             device = torch.cuda.current_device()
             props = torch.cuda.get_device_properties(device)
@@ -151,7 +168,7 @@ class HybridGPUMemoryManager:
     
     def _setup_gpu_optimizations(self):
         """Setup GPU-specific optimizations"""
-        if not self.gpu_available:
+        if not self.gpu_available or not TORCH_AVAILABLE or not torch:
             return
             
         try:
@@ -203,7 +220,10 @@ class HybridGPUMemoryManager:
                 logger.info("GPU cooldown expired, retrying GPU operations")
         
         try:
-            # Check current GPU memory usage
+            # Check current GPU memory usage only if torch is available
+            if not TORCH_AVAILABLE or not torch:
+                return False
+                
             allocated_gb = torch.cuda.memory_allocated() / (1024**3)
             reserved_gb = torch.cuda.memory_reserved() / (1024**3)
             estimated_needed_gb = estimated_memory_mb / 1024
@@ -285,20 +305,30 @@ class HybridGPUMemoryManager:
             inference_time = time.time() - start_time
             self._record_success(device, inference_time)
             
-        except torch.cuda.OutOfMemoryError as e:
-            logger.warning(f"GPU OOM for {model_name}: {str(e)[:100]}...")
-            self._record_failure(device, "out_of_memory")
-            
-            # Try CPU fallback if we were using GPU
-            if device == "cuda" and not inference_successful:
-                logger.info(f"🔄 Falling back to CPU for {model_name}")
-                self._aggressive_gpu_cleanup()
-                device = "cpu"
-                yield device
-                inference_time = time.time() - start_time
-                self._record_success("cpu", inference_time)
-                inference_successful = True
+        except Exception as oom_e:
+            # Check if this is a CUDA OOM error
+            if (TORCH_AVAILABLE and torch and 
+                hasattr(torch.cuda, 'OutOfMemoryError') and 
+                isinstance(oom_e, torch.cuda.OutOfMemoryError)):
+                logger.warning(f"GPU OOM for {model_name}: {str(oom_e)[:100]}...")
+                self._record_failure(device, "out_of_memory")
+                
+                # Try CPU fallback if we were using GPU
+                if device == "cuda" and not inference_successful:
+                    logger.info(f"🔄 Falling back to CPU for {model_name}")
+                    self._aggressive_gpu_cleanup()
+                    device = "cpu"
+                    yield device
+                    inference_time = time.time() - start_time
+                    self._record_success("cpu", inference_time)
+                    inference_successful = True
+                else:
+                    raise
             else:
+                # Handle as regular exception
+                if not inference_successful:
+                    self._record_failure(device, "inference_error")
+                    logger.error(f"Inference failed for {model_name} on {device}: {str(oom_e)[:100]}...")
                 raise
                 
         except Exception as e:
@@ -349,7 +379,7 @@ class HybridGPUMemoryManager:
     
     def _cleanup_after_inference(self, device: str, model_name: str):
         """Cleanup memory after inference"""
-        if device == "cuda" and self.gpu_available:
+        if device == "cuda" and self.gpu_available and TORCH_AVAILABLE and torch:
             try:
                 torch.cuda.empty_cache()
                 current_memory = torch.cuda.memory_allocated() / (1024**3)
@@ -367,13 +397,14 @@ class HybridGPUMemoryManager:
     
     def _aggressive_gpu_cleanup(self):
         """Perform aggressive GPU memory cleanup"""
-        if not self.gpu_available:
+        if not self.gpu_available or not TORCH_AVAILABLE or not torch:
             return
             
         try:
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
-            torch.cuda.reset_peak_memory_stats()
+            if hasattr(torch.cuda, 'reset_peak_memory_stats'):
+                torch.cuda.reset_peak_memory_stats()
             # Force garbage collection
             collected = gc.collect()
             logger.debug(f"Aggressive cleanup: collected {collected} objects")
@@ -391,10 +422,11 @@ class HybridGPUMemoryManager:
                 # Deep cleanup
                 collected = gc.collect()
                 
-                if self.gpu_available:
+                if self.gpu_available and TORCH_AVAILABLE and torch:
                     torch.cuda.empty_cache()
                     torch.cuda.synchronize()
-                    torch.cuda.reset_peak_memory_stats()
+                    if hasattr(torch.cuda, 'reset_peak_memory_stats'):
+                        torch.cuda.reset_peak_memory_stats()
                 
                 logger.debug(f"Maintenance complete - GC collected {collected} objects")
                 
@@ -424,7 +456,7 @@ class HybridGPUMemoryManager:
             }
         
         # Add GPU-specific info
-        if self.gpu_available:
+        if self.gpu_available and TORCH_AVAILABLE and torch:
             try:
                 allocated_gb = torch.cuda.memory_allocated() / (1024**3)
                 reserved_gb = torch.cuda.memory_reserved() / (1024**3)
@@ -482,7 +514,7 @@ class HybridGPUMemoryManager:
                 health['recommendations'].append("Monitor memory usage")
             
             # Check GPU memory and performance
-            if self.gpu_available:
+            if self.gpu_available and TORCH_AVAILABLE and torch:
                 try:
                     allocated_gb = torch.cuda.memory_allocated() / (1024**3)
                     gpu_usage_ratio = allocated_gb / self.gpu_memory_limit if self.gpu_memory_limit > 0 else 0
@@ -588,6 +620,10 @@ class HybridGPUMemoryManager:
 
 def optimize_torch_for_low_end_gpu():
     """Apply PyTorch optimizations for low-end GPUs like GT 710"""
+    if not TORCH_AVAILABLE or not torch:
+        logger.info("🎮 PyTorch not available, skipping GPU optimizations")
+        return
+        
     try:
         # Limit CPU threads to prevent resource contention
         available_cores = psutil.cpu_count(logical=False) or 2
