@@ -1,0 +1,137 @@
+version: '3.9'
+
+# Development environment
+# Use: docker-compose -f docker-compose.dev.yml up
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-compair}
+      POSTGRES_USER: ${POSTGRES_USER:-compair}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-compair123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-compair}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cumpair
+
+  # Redis for caching and Celery
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - cumpair
+
+  # FastAPI web application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "${API_PORT:-8000}:${API_PORT:-8000}"
+    environment:
+      PORT: "${API_PORT:-8000}"
+      WORKERS: "1"
+      RUN_MIGRATIONS: "true"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-compair}:${POSTGRES_PASSWORD:-compair123}@postgres:5432/${POSTGRES_DB:-compair}"
+      REDIS_URL: "redis://redis:${REDIS_PORT:-6379}"
+      DEBUG: "true"
+      LOG_LEVEL: "DEBUG"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app:ro
+      - ./main.py:/app/main.py:ro
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+      - ./logs:/app/logs
+    entrypoint: ["/bin/bash", "/app/docker/entrypoints/web-entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - cumpair
+
+  # Celery worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-compair}:${POSTGRES_PASSWORD:-compair123}@postgres:5432/${POSTGRES_DB:-compair}
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_CONCURRENCY=2
+      - CELERY_LOG_LEVEL=info
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+      - ./logs:/app/logs
+    entrypoint: ["/bin/bash", "/app/docker/entrypoints/worker-entrypoint.sh"]
+    networks:
+      - cumpair
+
+  # Scraper service
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    ports:
+      - "${SCRAPER_PORT:-3001}:${SCRAPER_PORT:-3001}"
+    environment:
+      PORT: "${SCRAPER_PORT:-3001}"
+      NODE_ENV: "development"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      REDIS_URL: "redis://redis:${REDIS_PORT:-6379}"
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./scraper/src:/app/src:ro
+      - ./scraper/logs:/app/logs
+    entrypoint: ["/bin/sh", "/app/docker/entrypoints/scraper-entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cumpair
+
+networks:
+  cumpair:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

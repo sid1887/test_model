@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   # Redis for Celery broker and caching
   redis:
@@ -93,6 +95,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_URL=redis://redis:6379
       - NODE_ENV=production
       - PORT=3001
     depends_on:

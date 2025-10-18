@@ -60,7 +60,9 @@ COPY . /app/
 # Copy and make scripts executable
 COPY start.sh /app/start.sh
 COPY healthcheck.sh /app/healthcheck.sh
-RUN chmod +x /app/start.sh /app/healthcheck.sh
+COPY docker/entrypoints/*.sh /app/docker/entrypoints/
+RUN chmod +x /app/start.sh /app/healthcheck.sh /app/docker/entrypoints/*.sh \
+    && sed -i 's/\r$//' /app/start.sh /app/healthcheck.sh /app/docker/entrypoints/*.sh
 
 # Default environment variables
 ENV PORT=8000
@@ -79,3 +81,8 @@ EXPOSE 8000
 
 # Set default command to our smart startup script
 CMD ["/app/start.sh"]
+
+# As a safety net, ensure critical runtime dependencies are present (in case auto installer skipped any)
+RUN pip install --no-cache-dir --disable-pip-version-check \
+    -r /app/requirements.txt || true \
+    && pip install --no-cache-dir --disable-pip-version-check prometheus-client uvicorn || true

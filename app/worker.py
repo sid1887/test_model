@@ -260,7 +260,8 @@ def generate_search_queries(analysis_result: Dict) -> list:
 @celery_app.task(name='health_check')
 def health_check():
     """Simple health check task"""
-    return {"status": "healthy", "timestamp": os.time.time()}
+    import time
+    return {"status": "healthy", "timestamp": time.time()}
 
 if __name__ == '__main__':
     celery_app.start()

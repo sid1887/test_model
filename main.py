@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.routes import analysis, analysis_new, comparison, health, price_comparison
+from app.api.routes import analysis, analysis_new, comparison, health, price_comparison, metrics
 from app.core.monitoring import setup_monitoring
 from app.core.middleware import setup_middleware
 
@@ -85,6 +85,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Include routers
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
+app.include_router(metrics.router, tags=["monitoring"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
 app.include_router(analysis_new.router, prefix="/api/v1", tags=["analysis-ai"])
 app.include_router(comparison.router, prefix="/api/v1", tags=["comparison"])
@@ -155,6 +156,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True
+        port=settings.api_port,
+        reload=settings.debug
     )

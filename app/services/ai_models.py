@@ -1,22 +1,7 @@
 #!/usr/bin/env python3
 """
-AI Model Manager for Cum    def __init__(self):
-        # Start with CPU for stability, GPU will be used dynamically
-        self.device = "cpu"  
-        self.models_dir = Path("models")
-        self.models_dir.mkdir(exist_ok=True)
-        
-        # Log GPU availability only if AI libraries are available
-        if AI_LIBRARIES_AVAILABLE and torch is not None:
-            gpu_available = torch.cuda.is_available()
-            if gpu_available:
-                gpu_name = torch.cuda.get_device_name(0)
-                gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
-                print(f"🔥 AI Model Manager initialized - Primary: CPU, GPU Available: {gpu_name} ({gpu_memory:.1f}GB)")
-            else:
-                print(f"🔥 AI Model Manager initialized - CPU only mode")
-        else:
-            print(f"🔥 AI Model Manager initialized - AI libraries not available, running in limited mode") YOLO, EfficientNet, and CLIP models
+AI Model Manager for Cumpair - YOLOv8, CLIP, and EfficientNet models
+Handles object detection, image-text matching, and specification extraction.
 """
 
 import asyncio

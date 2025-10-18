@@ -52,7 +52,7 @@ RUN npm config set fetch-timeout 600000 && \
 COPY . .
 
 # Create required directories and set permissions
-RUN mkdir -p /app/logs /app/.cache && \
+RUN mkdir -p /app/logs /app/.cache /app/docker/entrypoints && \
     chmod -R 755 /app
 
 # Expose port

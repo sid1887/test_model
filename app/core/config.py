@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     # Monitoring
     enable_prometheus: bool = True
     log_level: str = "INFO"
+    # Port configuration (centralized)
+    api_port: int = 8000
+    scraper_port: int = 3001
     
     # Captcha Service Configuration
     captcha_service_url: str = "http://localhost:9001"  # Self-hosted 2captcha-compatible service
@@ -112,13 +115,6 @@ class Settings(BaseSettings):
     def validate_redis_url(cls, v):
         if not v.startswith('redis://'):
             raise ValueError("REDIS_URL must be a valid Redis connection string")
-        return v
-    
-    @field_validator('max_file_size')
-    @classmethod
-    def validate_max_file_size(cls, v):
-        if v <= 0 or v > 100 * 1024 * 1024:  # Max 100MB
-            raise ValueError("MAX_FILE_SIZE must be between 1 byte and 100MB")
         return v
     
     @field_validator('max_file_size')

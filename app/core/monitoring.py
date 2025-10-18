@@ -2,7 +2,25 @@
 Monitoring and metrics setup using Prometheus
 """
 
-from prometheus_client import Counter, Histogram, Gauge, generate_latest
+try:
+    from prometheus_client import Counter, Histogram, Gauge, generate_latest
+except Exception:
+    # Fallback shims when prometheus_client isn't available to avoid crashes
+    class _Noop:
+        def labels(self, *args, **kwargs):
+            return self
+        def inc(self, *args, **kwargs):
+            return None
+        def observe(self, *args, **kwargs):
+            return None
+    def Counter(*args, **kwargs):
+        return _Noop()
+    def Histogram(*args, **kwargs):
+        return _Noop()
+    def Gauge(*args, **kwargs):
+        return _Noop()
+    def generate_latest():
+        return b""
 from fastapi import FastAPI, Response
 import time
 import structlog

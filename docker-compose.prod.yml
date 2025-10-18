@@ -1,0 +1,226 @@
+version: '3.9'
+
+# Production environment with HAProxy ingress
+# Use: docker-compose -f docker-compose.prod.yml up
+
+x-common-settings: &common-settings
+  restart: unless-stopped
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  # HAProxy ingress controller
+  haproxy:
+    <<: *common-settings
+    image: haproxy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8404:8404"  # Stats page
+    environment:
+      - HAPROXY_PORT=80
+      - HAPROXY_STATS_PORT=8404
+      - HAPROXY_ADMIN_USER=${HAPROXY_ADMIN_USER:-admin}
+      - HAPROXY_ADMIN_PASSWORD=${HAPROXY_ADMIN_PASSWORD}
+    volumes:
+      - ./configs/haproxy.cfg.template:/etc/haproxy/haproxy.cfg.template:ro
+      - ./docker/entrypoints/haproxy-entrypoint.sh:/entrypoint.sh:ro
+      - haproxy_certs:/etc/haproxy/certs
+    depends_on:
+      - web
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "haproxy", "-c", "-f", "/etc/haproxy/haproxy.cfg"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cumpair_public
+      - cumpair_backend
+
+  # PostgreSQL database (use managed service in production)
+  postgres:
+    <<: *common-settings
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cumpair_backend
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # Redis (use managed service like Upstash in production)
+  redis:
+    <<: *common-settings
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - cumpair_backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # FastAPI web application
+  web:
+    <<: *common-settings
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - PORT=8000
+      - WORKERS=2
+      - RUN_MIGRATIONS=true
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - SECRET_KEY=${SECRET_KEY}
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+      - ./logs:/app/logs
+    entrypoint: ["/bin/bash", "/app/docker/entrypoints/web-entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - cumpair_backend
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Celery worker
+  worker:
+    <<: *common-settings
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_CONCURRENCY=2
+      - CELERY_LOG_LEVEL=info
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      - ./uploads:/app/uploads
+      - ./models:/app/models
+      - ./logs:/app/logs
+    entrypoint: ["/bin/bash", "/app/docker/entrypoints/worker-entrypoint.sh"]
+    networks:
+      - cumpair_backend
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # Scraper service (optional - can run locally)
+  scraper:
+    <<: *common-settings
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./scraper/logs:/app/logs
+    entrypoint: ["/bin/sh", "/app/docker/entrypoints/scraper-entrypoint.sh"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cumpair_backend
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # Prometheus (metrics collection)
+  prometheus:
+    <<: *common-settings
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - cumpair_backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+networks:
+  cumpair_public:
+    driver: bridge
+  cumpair_backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  haproxy_certs:
+  prometheus_data:

@@ -25,8 +25,13 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 
-# Initialize Redis for task queue
-redis_client = redis.Redis(host='localhost', port=6380, db=0, decode_responses=True)
+# Initialize Redis for task queue (use REDIS_URL when available)
+_redis_url = os.getenv('REDIS_URL')
+if _redis_url:
+    redis_client = redis.from_url(_redis_url, decode_responses=True)
+else:
+    # Default to docker-compose service name
+    redis_client = redis.Redis(host=os.getenv('REDIS_HOST', 'redis'), port=int(os.getenv('REDIS_PORT', '6379')), db=0, decode_responses=True)
 
 # Configuration
 TEMP_DIR = Path("/app/temp")
@@ -331,5 +336,11 @@ if __name__ == '__main__':
     # Initialize OCR engines
     init_ocr_engines()
     
+    # Read port from environment for flexibility in containers
+    try:
+        port = int(os.getenv('CAPTCHA_PORT') or os.getenv('PORT') or 9001)
+    except ValueError:
+        port = 9001
+
     # Run Flask app
-    app.run(host='0.0.0.0', port=9001, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)
