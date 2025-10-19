@@ -58,15 +58,18 @@ class ModelManager:
         self.models_dir = Path("models")
         self.models_dir.mkdir(exist_ok=True)
         
-        # Log GPU availability only if AI libraries are available
+        # GPU/CUDA checks DISABLED - Running in CPU-only mode
+        # TODO: Re-enable GPU support later when CUDA dependencies are resolved
         if AI_LIBRARIES_AVAILABLE and torch is not None:
-            gpu_available = torch.cuda.is_available()
-            if gpu_available:
-                gpu_name = torch.cuda.get_device_name(0)
-                gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
-                print(f"🔥 AI Model Manager initialized - Primary: CPU, GPU Available: {gpu_name} ({gpu_memory:.1f}GB)")
-            else:
-                print(f"🔥 AI Model Manager initialized - CPU only mode")
+            # DEACTIVATED: GPU checking (dormant, can be re-enabled later)
+            # gpu_available = torch.cuda.is_available()
+            # if gpu_available:
+            #     gpu_name = torch.cuda.get_device_name(0)
+            #     gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
+            #     print(f"🔥 AI Model Manager initialized - Primary: CPU, GPU Available: {gpu_name} ({gpu_memory:.1f}GB)")
+            # else:
+            #     print(f"🔥 AI Model Manager initialized - CPU only mode")
+            print(f"🔥 AI Model Manager initialized - CPU ONLY mode (CUDA disabled)")
         else:
             print(f"🔥 AI Model Manager initialized - AI libraries not available, running in limited mode")
     
@@ -126,8 +129,8 @@ class ModelManager:
                 'conf': 0.25,      # Default confidence threshold
                 'iou': 0.45,       # IoU threshold for NMS
                 'max_det': 300,    # Maximum detections per image
-                'half': torch.cuda.is_available(),  # Use FP16 if GPU available
-                'device': self.device,
+                'half': False,     # DEACTIVATED: FP16 (was: torch.cuda.is_available())
+                'device': self.device,  # Will use CPU
                 'workers': 1,      # Single worker for API usage
                 'batch': 1,        # Single batch processing
                 'imgsz': 640,      # Standard input size

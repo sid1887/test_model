@@ -26,6 +26,8 @@ import time
 import structlog
 import sys
 import os
+from functools import wraps
+from typing import Callable, Any
 
 # Configure structured logging properly
 structlog.configure(
@@ -78,6 +80,59 @@ ACTIVE_TASKS = Gauge(
 
 # Setup structured logging
 logger = structlog.get_logger()
+
+def performance_timer(func: Callable) -> Callable:
+    """Decorator to measure and log function execution time"""
+    @wraps(func)
+    async def async_wrapper(*args, **kwargs) -> Any:
+        start_time = time.time()
+        try:
+            result = await func(*args, **kwargs)
+            duration = time.time() - start_time
+            logger.info(
+                f"{func.__name__} completed",
+                duration_seconds=duration,
+                function=func.__name__
+            )
+            return result
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(
+                f"{func.__name__} failed",
+                duration_seconds=duration,
+                function=func.__name__,
+                error=str(e)
+            )
+            raise
+    
+    @wraps(func)
+    def sync_wrapper(*args, **kwargs) -> Any:
+        start_time = time.time()
+        try:
+            result = func(*args, **kwargs)
+            duration = time.time() - start_time
+            logger.info(
+                f"{func.__name__} completed",
+                duration_seconds=duration,
+                function=func.__name__
+            )
+            return result
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(
+                f"{func.__name__} failed",
+                duration_seconds=duration,
+                function=func.__name__,
+                error=str(e)
+            )
+            raise
+    
+    # Return appropriate wrapper based on function type
+    import asyncio
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    else:
+        return sync_wrapper
 
 def setup_monitoring(app: FastAPI):
     """Setup monitoring middleware and endpoints"""

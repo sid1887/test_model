@@ -1,14 +1,13 @@
-"""
+﻿"""
 Cumpair: Open-Source AI Product Analysis & Price Comparison System
 Main FastAPI application entry point
 """
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 import uvicorn
-import os
 from contextlib import asynccontextmanager
 
 from app.core.config import settings
@@ -17,43 +16,44 @@ from app.api.routes import analysis, analysis_new, comparison, health, price_com
 from app.core.monitoring import setup_monitoring
 from app.core.middleware import setup_middleware
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize and cleanup application lifecycle"""
     # Initialize database
     await init_db()
-    
+
     # Initialize AI models
     try:
         from app.services.ai_models import ModelManager, ProductAnalyzer
-        print("🤖 Initializing AI models...")
-        
+        print("ðŸ¤– Initializing AI models...")
+
         # Create global AI instances
         app.state.model_manager = ModelManager()
         success = await app.state.model_manager.initialize_models()
-        
+
         if success:
             app.state.product_analyzer = ProductAnalyzer(app.state.model_manager)
-            print("✅ AI models initialized successfully!")
+            print("âœ… AI models initialized successfully!")
         else:
-            print("⚠️ AI models failed to initialize - some features may be limited")
+            print("âš ï¸ AI models failed to initialize - some features may be limited")
             app.state.model_manager = None
             app.state.product_analyzer = None
-            
+
     except Exception as e:
-        print(f"❌ AI model initialization error: {e}")
+        print(f"âŒ AI model initialization error: {e}")
         app.state.model_manager = None
         app.state.product_analyzer = None
-    
+
     # Initialize CLIP service
     try:
         from app.services.clip_search import clip_service
         await clip_service.initialize()
     except Exception as e:
         print(f"Warning: Could not initialize CLIP service: {e}")
-    
+
     yield
-    
+
     # Cleanup if needed
     pass
 
@@ -64,6 +64,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
 
 # Setup monitoring
 setup_monitoring(app)
@@ -95,9 +96,10 @@ app.include_router(price_comparison.router, tags=["price-comparison"])
 try:
     from app.api.routes.analytics import router as analytics_router
     app.include_router(analytics_router, tags=["analytics"])
-    print("✅ Analytics routes loaded successfully")
+    print("âœ… Analytics routes loaded successfully")
 except Exception as e:
     print(f"⚠️ Failed to load analytics routes: {e}")
+
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -122,24 +124,24 @@ async def root():
             </head>
             <body>
                 <div class="container">
-                    <h1>🔍 Cumpair</h1>
+                    <h1>ðŸ” Cumpair</h1>
                     <p>AI-Powered Product Analysis & Price Comparison System</p>
-                    
+
                     <div class="alert">
-                        <strong>Welcome!</strong> The enhanced React frontend is not available. 
+                        <strong>Welcome!</strong> The enhanced React frontend is not available.
                         Please use the API endpoints directly or check the setup.
                     </div>
-                    
+
                     <h3>Available API Endpoints:</h3>
                     <ul>
-                        <li><a href="/docs">📚 Interactive API Documentation (Swagger)</a></li>
-                        <li><a href="/api/v1/health">💚 Health Check</a></li>
+                        <li><a href="/docs">ðŸ“š Interactive API Documentation (Swagger)</a></li>
+                        <li><a href="/api/v1/health">ðŸ’š Health Check</a></li>
                         <li><strong>POST /api/v1/real-time-search</strong> - Real-time price search</li>
                         <li><strong>POST /api/v1/search-by-image</strong> - CLIP-based image search</li>
                         <li><strong>POST /api/v1/hybrid-search</strong> - Combined text + image search</li>
                         <li><strong>POST /api/v1/analyze</strong> - Upload image for AI analysis</li>
                     </ul>
-                    
+
                     <h3>Quick Test:</h3>
                     <p>Try a simple text search:</p>
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 5px; font-family: monospace;">

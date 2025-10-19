@@ -46,7 +46,11 @@ class CLIPSearchService:
             return
             
         self.clip_available = True
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # DEACTIVATED: GPU/CUDA support (CPU-only mode)
+        # self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"  # Force CPU-only mode
+        print(f"🖥️  CLIP service initialized - CPU ONLY mode (CUDA disabled)")
+        
         self.clip_model = None
         self.clip_preprocess = None
         self.sentence_model = None

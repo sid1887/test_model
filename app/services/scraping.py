@@ -449,7 +449,7 @@ class CaptchaSolver:
 class BaseScraper:
     """Base scraper class with common functionality"""
     
-    def __init__(self, proxy_manager: ProxyManager):
+    def __init__(self, proxy_manager=None):
         self.proxy_manager = proxy_manager
         self.captcha_solver = CaptchaSolver()
         self.session = None
@@ -682,7 +682,7 @@ class AdaptiveScrapingEngine:
     """Main adaptive scraping engine that tries multiple strategies"""
     
     def __init__(self):
-        self.proxy_manager = ProxyManager()
+        self.proxy_manager = None  # ProxyManager not yet implemented
         self.strategies = [
             DirectAPIScraper(self.proxy_manager),
             HTMLParseScraper(self.proxy_manager),

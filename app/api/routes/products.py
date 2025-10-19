@@ -1,13 +1,12 @@
-"""
+﻿"""
 Product management API routes
 Handles CRUD operations for products
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import List, Optional
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select, func, or_
 import logging
 from datetime import datetime
 
@@ -21,7 +20,10 @@ logger = logging.getLogger(__name__)
 # Create router
 router = APIRouter(prefix="/api/v1/products", tags=["products"])
 
+
 # Pydantic models for requests/responses
+
+
 class ProductCreate(BaseModel):
     """Product creation request"""
     name: str = Field(..., min_length=1, max_length=500)
@@ -31,6 +33,7 @@ class ProductCreate(BaseModel):
     image_url: Optional[str] = None
     specifications: Optional[dict] = None
 
+
 class ProductUpdate(BaseModel):
     """Product update request"""
     name: Optional[str] = Field(None, min_length=1, max_length=500)
@@ -39,6 +42,7 @@ class ProductUpdate(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     specifications: Optional[dict] = None
+
 
 @router.get("/")
 async def list_products(
@@ -53,16 +57,16 @@ async def list_products(
     """
     try:
         logger.info(f"Listing products: skip={skip}, limit={limit}, category={category}, search={search}")
-        
+
         # Build base query
         stmt = select(Product)
         count_stmt = select(func.count(Product.id))
-        
+
         # Apply category filter
         if category:
             stmt = stmt.where(Product.category.ilike(f"%{category}%"))
             count_stmt = count_stmt.where(Product.category.ilike(f"%{category}%"))
-            
+
         # Apply search filter
         if search:
             search_filter = or_(
@@ -72,17 +76,17 @@ async def list_products(
             )
             stmt = stmt.where(search_filter)
             count_stmt = count_stmt.where(search_filter)
-        
+
         # Get total count
         total_result = await db.execute(count_stmt)
         total = total_result.scalar()
-        
+
         # Apply pagination and ordering
         stmt = stmt.offset(skip).limit(limit).order_by(Product.created_at.desc())
-        
+
         result = await db.execute(stmt)
         products = result.scalars().all()
-        
+
         return {
             "success": True,
             "products": [
@@ -105,10 +109,11 @@ async def list_products(
             "limit": limit,
             "message": f"Retrieved {len(products)} products"
         }
-        
+
     except Exception as e:
         logger.error(f"Error listing products: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to list products: {str(e)}")
+
 
 @router.get("/{product_id}")
 async def get_product(
@@ -120,15 +125,15 @@ async def get_product(
     """
     try:
         logger.info(f"Getting product: {product_id}")
-        
+
         # Query product from database
         stmt = select(Product).where(Product.id == product_id)
         result = await db.execute(stmt)
         product = result.scalar_one_or_none()
-        
+
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
-            
+
         return {
             "success": True,
             "product": {
@@ -145,12 +150,13 @@ async def get_product(
             },
             "message": f"Product {product_id} retrieved successfully"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting product {product_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get product: {str(e)}")
+
 
 @router.post("/")
 async def create_product(
@@ -162,7 +168,7 @@ async def create_product(
     """
     try:
         logger.info(f"Creating product: {product_data.name}")
-        
+
         # Create product object
         new_product = Product(
             name=product_data.name,
@@ -171,12 +177,12 @@ async def create_product(
             specifications=product_data.specifications or {},
             is_processed=False
         )
-        
+
         # Add to database
         db.add(new_product)
         await db.commit()
         await db.refresh(new_product)
-        
+
         return {
             "success": True,
             "product": {
@@ -192,11 +198,12 @@ async def create_product(
             },
             "message": f"Product {new_product.id} created successfully"
         }
-        
+
     except Exception as e:
         await db.rollback()
         logger.error(f"Error creating product: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create product: {str(e)}")
+
 
 @router.put("/{product_id}")
 async def update_product(
@@ -209,15 +216,15 @@ async def update_product(
     """
     try:
         logger.info(f"Updating product: {product_id}")
-        
+
         # Find product
         stmt = select(Product).where(Product.id == product_id)
         result = await db.execute(stmt)
         product = result.scalar_one_or_none()
-        
+
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
-            
+
         # Update fields if provided
         if product_data.name is not None:
             product.name = product_data.name
@@ -227,11 +234,11 @@ async def update_product(
             product.category = product_data.category
         if product_data.specifications is not None:
             product.specifications = product_data.specifications
-        
+
         # Save changes
         await db.commit()
         await db.refresh(product)
-        
+
         return {
             "success": True,
             "product": {
@@ -247,13 +254,14 @@ async def update_product(
             },
             "message": f"Product {product_id} updated successfully"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         await db.rollback()
         logger.error(f"Error updating product {product_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update product: {str(e)}")
+
 
 @router.delete("/{product_id}")
 async def delete_product(
@@ -265,15 +273,15 @@ async def delete_product(
     """
     try:
         logger.info(f"Deleting product: {product_id}")
-        
+
         # Find product
         stmt = select(Product).where(Product.id == product_id)
         result = await db.execute(stmt)
         product = result.scalar_one_or_none()
-        
+
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
-            
+
         # Store product data before deletion
         product_data = {
             "id": product.id,
@@ -281,23 +289,24 @@ async def delete_product(
             "brand": product.brand,
             "category": product.category
         }
-        
+
         # Remove product
         await db.delete(product)
         await db.commit()
-        
+
         return {
             "success": True,
             "product": product_data,
             "message": f"Product {product_id} deleted successfully"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         await db.rollback()
         logger.error(f"Error deleting product {product_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete product: {str(e)}")
+
 
 @router.get("/stats/summary")
 async def get_product_stats(db: AsyncSession = Depends(get_db)):
@@ -306,27 +315,27 @@ async def get_product_stats(db: AsyncSession = Depends(get_db)):
     """
     try:
         logger.info("Getting product statistics")
-        
+
         # Get total products count
         total_stmt = select(func.count(Product.id))
         total_result = await db.execute(total_stmt)
         total_products = total_result.scalar()
-        
+
         # Get unique categories
         categories_stmt = select(Product.category).distinct().where(Product.category.isnot(None))
         categories_result = await db.execute(categories_stmt)
         categories = [cat for cat in categories_result.scalars().all() if cat]
-        
+
         # Get unique brands
         brands_stmt = select(Product.brand).distinct().where(Product.brand.isnot(None))
         brands_result = await db.execute(brands_stmt)
         brands = [brand for brand in brands_result.scalars().all() if brand]
-        
+
         # Get processed count
-        processed_stmt = select(func.count(Product.id)).where(Product.is_processed == True)
+        processed_stmt = select(func.count(Product.id)).where(Product.is_processed.is_(True))
         processed_result = await db.execute(processed_stmt)
         processed_count = processed_result.scalar()
-        
+
         return {
             "success": True,
             "stats": {
@@ -341,7 +350,7 @@ async def get_product_stats(db: AsyncSession = Depends(get_db)):
             },
             "message": "Product statistics retrieved successfully"
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting product stats: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get product stats: {str(e)}")

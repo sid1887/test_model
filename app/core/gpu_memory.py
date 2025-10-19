@@ -1,12 +1,15 @@
 """
-Hybrid GPU/CPU Memory Management for AI Models
-Optimized for GT 710 (2GB VRAM) with intelligent device switching
+CPU-ONLY Memory Management for AI Models (GPU/CUDA DEACTIVATED)
+NOTE: GPU/CUDA functionality is dormant and can be re-enabled later
 """
 
+# DEACTIVATED: Torch GPU imports (kept for future re-activation)
 # Try to import torch - fall back gracefully if not available
 try:
     import torch
     TORCH_AVAILABLE = True
+    # Force CPU-only mode
+    torch.cuda.is_available = lambda: False  # Override to always return False
 except ImportError:
     torch = None
     TORCH_AVAILABLE = False
@@ -24,6 +27,7 @@ from pathlib import Path
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.info("🖥️  GPU/CUDA support DISABLED - Running in CPU-only mode")
 
 @dataclass
 class DeviceStats:
@@ -54,22 +58,25 @@ class DeviceStats:
 
 
 class HybridGPUMemoryManager:
-    """Intelligent GPU/CPU memory manager optimized for GT 710 and low-end GPUs"""
+    """CPU-ONLY memory manager (GPU/CUDA functionality DEACTIVATED)"""
     
     def __init__(self, gpu_memory_limit_gb: Optional[float] = None, 
                  memory_threshold: float = 0.7, 
                  cleanup_interval: int = 10):
         """
-        Initialize the memory manager
+        Initialize the memory manager (CPU-only mode)
         
         Args:
-            gpu_memory_limit_gb: Manual GPU memory limit in GB (auto-detected if None)
+            gpu_memory_limit_gb: IGNORED (GPU disabled)
             memory_threshold: Memory usage threshold (0.0-1.0)
             cleanup_interval: Operations between cleanup cycles
         """
-        self.gpu_available = TORCH_AVAILABLE and torch.cuda.is_available() if torch else False
+        # DEACTIVATED: GPU checking (kept for future re-activation)
+        # self.gpu_available = TORCH_AVAILABLE and torch.cuda.is_available() if torch else False
+        self.gpu_available = False  # Force CPU-only mode
+        
         self.device_stats = {
-            "cuda": DeviceStats(),
+            "cuda": DeviceStats(),  # Kept for compatibility, never used
             "cpu": DeviceStats()
         }
         
