@@ -622,3 +622,6 @@ class CumpairPriceEngine:
 
 # Global instance
 cumpair_price_engine = CumpairPriceEngine()
+
+# Alias for backward compatibility
+price_comparison_service = cumpair_price_engine

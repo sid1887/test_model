@@ -14,12 +14,55 @@ WORKDIR /app
 # Install system dependencies with automated retry mechanism
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    build-essential \
     curl \
     wget \
     procps \
     ca-certificates \
     gnupg \
     git \
+    # Runtime libs for OpenCV/EasyOCR/Matplotlib
+    libgl1 \
+    libglib2.0-0 \
+    # Tesseract OCR engine and English language data
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libleptonica-dev \
+    libtesseract-dev \
+    # Math/BLAS/LAPACK
+    libopenblas-dev \
+    liblapack-dev \
+    libblas-dev \
+    gfortran \
+    # GEOS/PROJ/GDAL for Shapely/GIS
+    libgeos-dev \
+    libproj-dev \
+    gdal-bin \
+    # Audio/Media
+    ffmpeg \
+    libsndfile1 \
+    sox \
+    swig \
+    pkg-config \
+    # Playwright dependencies (Chromium)
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libxkbcommon0 \
+    libasound2 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    fonts-liberation \
+    # Node for Playwright and build tooling
+    nodejs \
+    npm \
+    # Additional libs for Python packages
+    libmagic1 \
+    libgomp1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && echo "System dependencies installed"
@@ -57,12 +100,11 @@ FROM base AS production
 # Copy application code
 COPY . /app/
 
-# Copy and make scripts executable
-COPY start.sh /app/start.sh
-COPY healthcheck.sh /app/healthcheck.sh
-COPY docker/entrypoints/*.sh /app/docker/entrypoints/
-RUN chmod +x /app/start.sh /app/healthcheck.sh /app/docker/entrypoints/*.sh \
-    && sed -i 's/\r$//' /app/start.sh /app/healthcheck.sh /app/docker/entrypoints/*.sh
+# Copy and make scripts executable (updated paths after workspace organization)
+COPY scripts/start.sh /app/start.sh
+COPY scripts/healthcheck.sh /app/healthcheck.sh
+RUN chmod +x /app/start.sh /app/healthcheck.sh && \
+    sed -i 's/\r$//' /app/start.sh /app/healthcheck.sh
 
 # Default environment variables
 ENV PORT=8000
@@ -86,3 +128,6 @@ CMD ["/app/start.sh"]
 RUN pip install --no-cache-dir --disable-pip-version-check \
     -r /app/requirements.txt || true \
     && pip install --no-cache-dir --disable-pip-version-check prometheus-client uvicorn || true
+
+# Ensure Playwright browsers are installed (Chromium) for scraping
+RUN python -m playwright install --with-deps chromium || true

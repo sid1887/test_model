@@ -58,6 +58,7 @@ lxml>=4.9.0,<6.0.0
 playwright>=1.40.0
 fake-useragent>=1.4.0
 selenium>=4.15.0
+webdriver-manager>=4.0.0  # auto-manage drivers if Selenium path is used
 
 # ============================================================================
 # AI/ML CORE PACKAGES - CPU-ONLY MODE (CUDA/GPU disabled for now)
@@ -66,6 +67,8 @@ selenium>=4.15.0
 # GPU support can be re-enabled later by uncommenting CUDA versions below
 torch>=2.0.0,<2.5.0 --index-url https://download.pytorch.org/whl/cpu
 torchvision>=0.15.0,<0.20.0 --index-url https://download.pytorch.org/whl/cpu
+torchaudio>=2.0.0,<2.5.0 --index-url https://download.pytorch.org/whl/cpu
+torchdata>=0.6.0
 
 # CUDA versions (dormant - uncomment when ready for GPU):
 # torch>=2.0.0,<2.5.0
@@ -80,15 +83,25 @@ pillow>=10.0.0,<11.0.0
 # ============================================================================
 opencv-python>=4.8.0
 ultralytics>=8.0.0
-tensorflow>=2.13.0  # ACTUALLY USED - EfficientNet models in image_analysis.py
+tensorflow>=2.13.0,<2.19.0  # ACTUALLY USED - EfficientNet (2.19.x broken - missing tensorflow.python)
+tensorflow-io-gcs-filesystem>=0.34.0  # For TensorFlow GCS support
+tf-keras>=2.17.0,<2.19.0  # Required for TensorFlow 2.x + transformers (match TensorFlow version)
+timm>=0.9.0
+einops>=0.6.0
+pycocotools>=2.0.7
 
 # ============================================================================
 # NLP & TRANSFORMERS
 # ============================================================================
-transformers>=4.35.0,<5.0.0
+transformers[torch,vision]>=4.35.0,<5.0.0
 tokenizers>=0.15.0
 sentence-transformers>=2.2.0
 sentencepiece>=0.1.99
+accelerate>=0.20.0  # Required by transformers for pipeline
+safetensors>=0.4.0  # HuggingFace model weight format
+huggingface-hub>=0.20.0  # explicit to avoid transitive misses
+datasets>=2.15.0
+peft>=0.10.0
 textblob>=0.17.0
 
 # ============================================================================
@@ -102,6 +115,10 @@ regex>=2023.0.0
 # MACHINE LEARNING UTILITIES
 # ============================================================================
 scikit-learn>=1.3.0,<1.6.0
+onnx>=1.14.0
+onnxruntime>=1.16.0
+optimum[onnxruntime]>=1.15.0  # Model optimization for inference
+Cython>=0.29.36
 
 # ============================================================================
 # VECTOR SEARCH & EMBEDDINGS - CRITICAL FOR SIMILARITY SEARCH
@@ -112,23 +129,38 @@ faiss-cpu>=1.7.4
 # DATA PROCESSING & ANALYSIS
 # ============================================================================
 pandas>=2.0.0,<3.0.0
+pyarrow>=14.0.0  # Apache Arrow for efficient data format
+numba>=0.58.0  # JIT compilation for numeric code
 
 # ============================================================================
 # TIME SERIES FORECASTING - FOR PRICING ANALYTICS
 # ============================================================================
 prophet>=1.1.0
+plotly>=5.18.0  # prophet.plot requires plotly
+kaleido==0.2.1  # static image export for plotly if needed
+cmdstanpy>=1.2.0  # Prophet backend toolchain
+convertdate>=2.4.0
+LunarCalendar>=0.0.9
+pymeeus>=0.5.12
 
 # ============================================================================
 # OCR & TEXT EXTRACTION - FOR CAPTCHA SERVICE
 # ============================================================================
 pytesseract>=0.3.10
 easyocr>=1.7.0
+python-bidi>=0.4.2
+shapely>=2.0.0
+pyclipper>=1.3.0.post5
+scikit-image>=0.21.0
+imageio>=2.31.0
 
 # ============================================================================
 # MONITORING & LOGGING - CRITICAL (was missing structlog!)
 # ============================================================================
 prometheus-client>=0.19.0
 structlog>=23.1.0,<25.0.0
+colorlog>=6.7.0  # Color logging for console output
+rich>=13.7.0  # Rich text formatting and progress bars
 
 # ============================================================================
 # TIME SERIES FORECASTING & ADVANCED ANALYTICS
@@ -154,6 +186,8 @@ click>=8.1.0
 python-dateutil>=2.8.2
 tenacity>=8.2.0
 tqdm>=4.66.0
+python-magic>=0.4.27
+grpcio>=1.58.0
 
 # ============================================================================
 # DEVELOPMENT & TESTING
@@ -168,6 +202,8 @@ pyyaml>=6.0.1
 matplotlib>=3.8.0,<4.0.0
 watchfiles>=0.21.0
 psutil>=5.9.0
+protobuf>=3.20.3,<5.0.0  # avoid TF/Proto incompatibilities
+
 
 # ============================================================================
 # TOTAL: ~70 core packages + transitive dependencies = 150+ packages
