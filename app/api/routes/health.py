@@ -17,12 +17,38 @@ router = APIRouter()
 
 @router.get("/health")
 async def health_check():
-    """Basic health check endpoint"""
-    return {
+    """Basic health check endpoint with Celery worker status"""
+    health_response = {
         "status": "healthy",
         "service": "Cumpair API",
-        "version": settings.app_version
+        "version": settings.app_version,
+        "checks": {}
     }
+    
+    # Quick Celery worker check
+    try:
+        from app.worker import celery_app
+        inspect = celery_app.control.inspect(timeout=1.0)
+        active_workers = inspect.active()
+        stats = inspect.stats()
+        
+        if active_workers and stats:
+            health_response["checks"]["celery"] = {
+                "status": "healthy",
+                "active_workers": len(active_workers)
+            }
+        else:
+            health_response["checks"]["celery"] = {
+                "status": "unknown",
+                "active_workers": 0
+            }
+    except Exception as e:
+        health_response["checks"]["celery"] = {
+            "status": "unknown",
+            "error": str(e)
+        }
+    
+    return health_response
 
 @router.get("/health/detailed")
 async def detailed_health_check(db: AsyncSession = Depends(get_db)):
@@ -234,3 +260,64 @@ async def ai_models_health_check():
     except Exception as e:
         logger.error(f"AI models health check failed: {e}")
         raise HTTPException(status_code=500, detail=f"AI health check failed: {str(e)}")
+
+@router.get("/ai-models-status")
+async def ai_models_status():
+    """
+    AI Models Status endpoint - simplified version for testing
+    Returns status of all AI models in the system
+    """
+    try:
+        # Try to import and check model manager
+        try:
+            from app.services.ai_models import model_manager
+            has_model_manager = True
+        except Exception:
+            has_model_manager = False
+        
+        # Try to check CLIP service
+        try:
+            from app.services.clip_search import clip_service
+            has_clip = clip_service is not None
+        except Exception:
+            has_clip = False
+        
+        # Basic status response
+        response = {
+            "status": "healthy" if (has_model_manager or has_clip) else "degraded",
+            "timestamp": datetime.now().isoformat(),
+            "models": {}
+        }
+        
+        if has_model_manager:
+            response["models"]["yolo"] = {
+                "status": "loaded" if model_manager.yolo_model is not None else "not_loaded",
+                "device": str(model_manager.device) if hasattr(model_manager, 'device') else "unknown"
+            }
+            response["models"]["efficientnet"] = {
+                "status": "loaded" if model_manager.efficientnet_model is not None else "not_loaded"
+            }
+        
+        if has_clip:
+            response["models"]["clip"] = {
+                "status": "available",
+                "service": "initialized"
+            }
+        
+        # Check GPU/CUDA availability
+        response["gpu"] = {
+            "cuda_available": torch.cuda.is_available(),
+            "device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0
+        }
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"AI models status check failed: {e}")
+        return {
+            "status": "error",
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "models": {}
+        }
+

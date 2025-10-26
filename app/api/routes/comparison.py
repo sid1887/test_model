@@ -2,7 +2,7 @@
 Enhanced Price comparison API endpoints supporting 15+ retailers
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import Optional, List
@@ -10,6 +10,10 @@ from pydantic import BaseModel, Field
 import asyncio
 import httpx
 import json
+import os
+import shutil
+import uuid
+from pathlib import Path
 
 from app.core.database import get_db
 from app.models.product import Product
@@ -17,6 +21,7 @@ from app.models.price_comparison import PriceComparison
 from app.services.price_comparison import price_comparison_service
 from app.services.retailer_manager import retailer_manager, RetailerCategory, RetailerPriority
 from app.worker import scrape_prices_task
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -358,8 +363,8 @@ async def real_time_price_search(
         Real-time price comparison results
     """
     try:
-        # Call Node.js scraper microservice
-        scraper_url = "http://localhost:3000/api/search"
+        # Call Node.js scraper microservice (using Docker service name)
+        scraper_url = "http://scraper:3001/api/search"
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
@@ -789,3 +794,212 @@ async def update_retailer_status(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update retailer status: {str(e)}")
+
+
+# ============================================
+# IMAGE-BASED PRODUCT SEARCH WITH SCRAPER
+# ============================================
+
+@router.post("/search-by-image")
+async def search_products_by_image(
+    file: UploadFile = File(...),
+    sites: Optional[List[str]] = Query(default=["amazon", "walmart", "ebay"]),
+    max_results: int = Query(default=5, ge=1, le=20),
+    use_ocr: bool = Query(default=True, description="Use OCR to extract text from image"),
+    use_barcode: bool = Query(default=True, description="Detect barcodes in image"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Search for products by uploading an image (product photo, barcode, or screenshot)
+    
+    Workflow:
+    1. Upload image
+    2. Detect product info (OCR text, barcode, or image caption)
+    3. Search retailers via scraper
+    4. Return real-time prices
+    
+    Args:
+        file: Image file (product photo, barcode, QR code, or screenshot)
+        sites: List of retailer sites to search
+        max_results: Maximum results per retailer
+        use_ocr: Whether to use OCR text extraction
+        use_barcode: Whether to detect barcodes/QR codes
+        db: Database session
+        
+    Returns:
+        Search results with detected product info and real-time prices
+    """
+    try:
+        # Validate file
+        if not file or not file.content_type or not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Save uploaded file temporarily
+        upload_dir = Path(settings.upload_dir)
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        file_extension = os.path.splitext(file.filename)[1] or '.jpg'
+        temp_filename = f"search_{uuid.uuid4()}{file_extension}"
+        temp_file_path = upload_dir / temp_filename
+        
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Initialize results
+        detected_info = {
+            "barcode": None,
+            "ocr_text": None,
+            "search_queries": []
+        }
+        
+        # 1. Try barcode detection first (most accurate)
+        if use_barcode:
+            try:
+                from app.services.image_processor import get_image_processor
+                processor = await get_image_processor()
+                barcodes = await processor._detect_barcodes(str(temp_file_path))
+                
+                if barcodes:
+                    detected_info["barcode"] = barcodes[0]  # Use first barcode
+                    # Barcode data is the product identifier
+                    detected_info["search_queries"].append(barcodes[0].get("data", ""))
+            except Exception as e:
+                print(f"Barcode detection failed: {e}")
+        
+        # 2. Try OCR text extraction
+        if use_ocr and not detected_info["search_queries"]:
+            try:
+                from app.services.image_processor import get_image_processor
+                processor = await get_image_processor()
+                ocr_result = await processor._extract_text(str(temp_file_path))
+                
+                if ocr_result and ocr_result.get("text"):
+                    text = ocr_result["text"].strip()
+                    detected_info["ocr_text"] = text
+                    # Use OCR text as search query
+                    if len(text) > 5:  # Minimum meaningful text
+                        detected_info["search_queries"].append(text)
+            except Exception as e:
+                print(f"OCR failed: {e}")
+        
+        # 3. If still no queries, try image captioning
+        if not detected_info["search_queries"]:
+            try:
+                # Use a simple heuristic based on filename or return error
+                detected_info["search_queries"].append(
+                    file.filename.replace(file_extension, "").replace("_", " ")
+                )
+            except:
+                pass
+        
+        if not detected_info["search_queries"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Could not extract product information from image. Try an image with text, barcode, or clearer product photo."
+            )
+        
+        # 4. Search retailers via scraper
+        search_query = detected_info["search_queries"][0]
+        
+        # Call Node.js scraper
+        scraper_url = "http://scraper:3001/api/search"
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                scraper_url,
+                json={
+                    "query": search_query,
+                    "sites": sites,
+                    "max_results": max_results
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Scraper service error: {response.text}"
+                )
+            
+            scraper_results = response.json()
+        
+        # Cleanup temp file
+        try:
+            temp_file_path.unlink()
+        except:
+            pass
+        
+        return {
+            "status": "success",
+            "detected_info": detected_info,
+            "search_query": search_query,
+            "results": scraper_results.get("results", []),
+            "metadata": {
+                **scraper_results.get("metadata", {}),
+                "detection_method": "barcode" if detected_info["barcode"] else "ocr" if detected_info["ocr_text"] else "filename",
+                "image_processed": True
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Cleanup on error
+        try:
+            if 'temp_file_path' in locals():
+                temp_file_path.unlink()
+        except:
+            pass
+        raise HTTPException(status_code=500, detail=f"Image search failed: {str(e)}")
+
+
+@router.post("/search-by-barcode")
+async def search_products_by_barcode(
+    barcode: str = Query(..., description="Barcode or UPC code to search"),
+    sites: Optional[List[str]] = Query(default=["amazon", "walmart", "ebay"]),
+    max_results: int = Query(default=5, ge=1, le=20)
+):
+    """
+    Search for products by barcode/UPC code
+    
+    Args:
+        barcode: Barcode or UPC number
+        sites: List of retailer sites to search
+        max_results: Maximum results per retailer
+        
+    Returns:
+        Real-time product prices from multiple retailers
+    """
+    try:
+        # Call Node.js scraper with barcode
+        scraper_url = "http://scraper:3001/api/search"
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                scraper_url,
+                json={
+                    "query": barcode,
+                    "sites": sites,
+                    "max_results": max_results
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Scraper service error: {response.text}"
+                )
+            
+            scraper_results = response.json()
+        
+        return {
+            "status": "success",
+            "barcode": barcode,
+            "results": scraper_results.get("results", []),
+            "metadata": {
+                **scraper_results.get("metadata", {}),
+                "search_type": "barcode"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Barcode search failed: {str(e)}")

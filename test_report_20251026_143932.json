@@ -1,0 +1,376 @@
+{
+  "timestamp": "2025-10-26T14:39:32.546375",
+  "summary": {
+    "total_tests": 21,
+    "passed": 15,
+    "failed": 6,
+    "pass_rate": 71.42857142857143,
+    "duration": 64.08122420310974
+  },
+  "services": {
+    "redis_main": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "redis_captcha": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "redis_proxy": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "postgres": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "web_api": {
+      "healthy": true,
+      "tests_passed": 5,
+      "tests_failed": 1,
+      "response_time": 0.024567127227783203,
+      "errors": [
+        ""
+      ]
+    },
+    "frontend": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "worker": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "scraper": {
+      "healthy": true,
+      "tests_passed": 2,
+      "tests_failed": 0,
+      "response_time": 0.008998394012451172,
+      "errors": []
+    },
+    "captcha_solver": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 2,
+      "response_time": 0.0,
+      "errors": [
+        "Health check failed: Server disconnected",
+        "Server disconnected"
+      ]
+    },
+    "proxy_api": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 2,
+      "response_time": 0.0,
+      "errors": [
+        "Health check failed: Server disconnected",
+        "Server disconnected"
+      ]
+    },
+    "haproxy": {
+      "healthy": false,
+      "tests_passed": 2,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "integration": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 1,
+      "response_time": 0.0,
+      "errors": [
+        ""
+      ]
+    }
+  },
+  "results": [
+    {
+      "service": "redis_main",
+      "test": "Connection & Operations",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.12934231758117676,
+      "message": "Redis fully operational",
+      "details": {
+        "version": "7.4.6",
+        "port": 6379
+      }
+    },
+    {
+      "service": "redis_captcha",
+      "test": "Connection & Operations",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.04515576362609863,
+      "message": "Redis fully operational",
+      "details": {
+        "version": "7.4.6",
+        "port": 6380
+      }
+    },
+    {
+      "service": "redis_proxy",
+      "test": "Connection & Operations",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.061075448989868164,
+      "message": "Redis fully operational",
+      "details": {
+        "version": "7.4.6",
+        "port": 6381
+      }
+    },
+    {
+      "service": "postgres",
+      "test": "Schema Validation",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.4627871513366699,
+      "message": "Database schema valid",
+      "details": {
+        "tables": 17,
+        "version": "15.14"
+      }
+    },
+    {
+      "service": "web_api",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.024567127227783203,
+      "message": "Service healthy",
+      "details": {
+        "status": "ok",
+        "response_time": "0.025s"
+      }
+    },
+    {
+      "service": "web_api",
+      "test": "OpenAPI Docs",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.006625652313232422,
+      "message": "API documentation accessible",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "Real-Time Search API",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 30.069448709487915,
+      "message": "",
+      "details": null
+    },
+    {
+      "service": "frontend",
+      "test": "Page Load",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.059798240661621094,
+      "message": "Frontend accessible",
+      "details": {
+        "size": "1881 bytes"
+      }
+    },
+    {
+      "service": "worker",
+      "test": "Celery Worker Health",
+      "level": "INTERMEDIATE",
+      "passed": true,
+      "duration": 2.0268759727478027,
+      "message": "Celery worker operational",
+      "details": {
+        "active_workers": 1
+      }
+    },
+    {
+      "service": "scraper",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.008998394012451172,
+      "message": "Service healthy",
+      "details": {
+        "status": "healthy",
+        "response_time": "0.009s"
+      }
+    },
+    {
+      "service": "scraper",
+      "test": "Status Endpoint",
+      "level": "INTERMEDIATE",
+      "passed": true,
+      "duration": 0.00400543212890625,
+      "message": "Scraper status available",
+      "details": {
+        "status": "healthy",
+        "service": "scraper",
+        "timestamp": "2025-10-26T09:09:01.404Z",
+        "version": "1.0.0",
+        "uptime": 1849.820689762,
+        "redis": {
+          "isConnected": true,
+          "host": "redis",
+          "port": "6379"
+        },
+        "scraper": {
+          "totalRequests": 0,
+          "successfulRequests": 0,
+          "failedRequests": 0,
+          "averageResponseTime": 0,
+          "startTime": 1761467898196,
+          "proxiesUsed": 0,
+          "captchasSolved": 0,
+          "uptime": 1843208,
+          "successRate": "0%",
+          "requestsPerMinute": 0,
+          "activeBrowsers": 1,
+          "proxyPoolSize": 0,
+          "proxiesRotated": 0,
+          "services": {
+            "proxyService": "http://proxy-api:8001",
+            "captchaService": "http://captcha-solver:9001",
+            "haproxy": "http://cumpair-proxy-manager:8080",
+            "proxyRotationEnabled": true
+          }
+        }
+      }
+    },
+    {
+      "service": "captcha_solver",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.08734011650085449,
+      "message": "Health check failed: Server disconnected",
+      "details": null
+    },
+    {
+      "service": "captcha_solver",
+      "test": "Solver Info",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.007983922958374023,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "proxy_api",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.11356925964355469,
+      "message": "Health check failed: Server disconnected",
+      "details": null
+    },
+    {
+      "service": "proxy_api",
+      "test": "Proxy List",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.00881338119506836,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "haproxy",
+      "test": "Stats Page",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.13180160522460938,
+      "message": "HAProxy stats accessible",
+      "details": null
+    },
+    {
+      "service": "haproxy",
+      "test": "Proxy Endpoint",
+      "level": "INTERMEDIATE",
+      "passed": true,
+      "duration": 0.011565208435058594,
+      "message": "HAProxy proxy accessible",
+      "details": {
+        "status": 503
+      }
+    },
+    {
+      "service": "web_api",
+      "test": "CLIP Image Search",
+      "level": "ADVANCED",
+      "passed": true,
+      "duration": 0.16421198844909668,
+      "message": "Image search endpoint available (validation error expected)",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "AI Models Status",
+      "level": "ADVANCED",
+      "passed": true,
+      "duration": 0.05303812026977539,
+      "message": "AI models service available",
+      "details": {
+        "status": "healthy",
+        "timestamp": "2025-10-26T09:09:02.007378",
+        "models": {
+          "yolo": {
+            "status": "not_loaded",
+            "device": "cpu"
+          },
+          "efficientnet": {
+            "status": "not_loaded"
+          },
+          "clip": {
+            "status": "available",
+            "service": "initialized"
+          }
+        },
+        "gpu": {
+          "cuda_available": false,
+          "device_count": 0
+        }
+      }
+    },
+    {
+      "service": "integration",
+      "test": "Step 1: Search",
+      "level": "INTEGRATION",
+      "passed": false,
+      "duration": 30.284982681274414,
+      "message": "",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "Concurrent Requests (50)",
+      "level": "ADVANCED",
+      "passed": true,
+      "duration": 0.24092936515808105,
+      "message": "Handled 50/50 requests",
+      "details": {
+        "avg_response": "0.005s",
+        "failed": 0
+      }
+    }
+  ]
+}

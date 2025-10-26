@@ -1,0 +1,325 @@
+{
+  "timestamp": "2025-10-24T22:06:24.330511",
+  "summary": {
+    "total_tests": 21,
+    "passed": 9,
+    "failed": 12,
+    "pass_rate": 42.857142857142854,
+    "duration": 16.694239854812622
+  },
+  "services": {
+    "redis_main": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "redis_captcha": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "redis_proxy": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "postgres": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 1,
+      "response_time": 0.0,
+      "errors": [
+        "Database error: password authentication failed for user \"postgres\""
+      ]
+    },
+    "web_api": {
+      "healthy": true,
+      "tests_passed": 3,
+      "tests_failed": 3,
+      "response_time": 0.01176309585571289,
+      "errors": [
+        "Search returned 404",
+        "Image search endpoint not found",
+        "OCR endpoint not found"
+      ]
+    },
+    "frontend": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "worker": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 1,
+      "response_time": 0.0,
+      "errors": [
+        "Worker stats returned 404"
+      ]
+    },
+    "scraper": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 2,
+      "response_time": 0.0,
+      "errors": [
+        "Health check failed: Server disconnected",
+        "Status check failed: Server disconnected"
+      ]
+    },
+    "captcha_solver": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 2,
+      "response_time": 0.0,
+      "errors": [
+        "Health check failed: Server disconnected",
+        "Server disconnected"
+      ]
+    },
+    "proxy_api": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 2,
+      "response_time": 0.0,
+      "errors": [
+        "Health check failed: Server disconnected",
+        "Server disconnected"
+      ]
+    },
+    "haproxy": {
+      "healthy": false,
+      "tests_passed": 2,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "integration": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 1,
+      "response_time": 0.0,
+      "errors": [
+        "Search failed with 404"
+      ]
+    }
+  },
+  "results": [
+    {
+      "service": "redis_main",
+      "test": "Connection & Operations",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.0332493782043457,
+      "message": "Redis fully operational",
+      "details": {
+        "version": "7.4.6",
+        "port": 6379
+      }
+    },
+    {
+      "service": "redis_captcha",
+      "test": "Connection & Operations",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.05726003646850586,
+      "message": "Redis fully operational",
+      "details": {
+        "version": "7.4.6",
+        "port": 6380
+      }
+    },
+    {
+      "service": "redis_proxy",
+      "test": "Connection & Operations",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.0364377498626709,
+      "message": "Redis fully operational",
+      "details": {
+        "version": "7.4.6",
+        "port": 6381
+      }
+    },
+    {
+      "service": "postgres",
+      "test": "Schema Validation",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.040032386779785156,
+      "message": "Database error: password authentication failed for user \"postgres\"",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.01176309585571289,
+      "message": "Service healthy",
+      "details": {
+        "status": "ok",
+        "response_time": "0.012s"
+      }
+    },
+    {
+      "service": "web_api",
+      "test": "OpenAPI Docs",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.006134510040283203,
+      "message": "API documentation accessible",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "Search API",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.0044384002685546875,
+      "message": "Search returned 404",
+      "details": null
+    },
+    {
+      "service": "frontend",
+      "test": "Page Load",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.01572442054748535,
+      "message": "Frontend accessible",
+      "details": {
+        "size": "1881 bytes"
+      }
+    },
+    {
+      "service": "worker",
+      "test": "Worker Stats",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.004618167877197266,
+      "message": "Worker stats returned 404",
+      "details": null
+    },
+    {
+      "service": "scraper",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.005391836166381836,
+      "message": "Health check failed: Server disconnected",
+      "details": null
+    },
+    {
+      "service": "scraper",
+      "test": "Status Endpoint",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.004881620407104492,
+      "message": "Status check failed: Server disconnected",
+      "details": null
+    },
+    {
+      "service": "captcha_solver",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.004960060119628906,
+      "message": "Health check failed: Server disconnected",
+      "details": null
+    },
+    {
+      "service": "captcha_solver",
+      "test": "Solver Info",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.004233360290527344,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "proxy_api",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.004472970962524414,
+      "message": "Health check failed: Server disconnected",
+      "details": null
+    },
+    {
+      "service": "proxy_api",
+      "test": "Proxy List",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.0042629241943359375,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "haproxy",
+      "test": "Stats Page",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.007128238677978516,
+      "message": "HAProxy stats accessible",
+      "details": null
+    },
+    {
+      "service": "haproxy",
+      "test": "Proxy Endpoint",
+      "level": "INTERMEDIATE",
+      "passed": true,
+      "duration": 0.004398345947265625,
+      "message": "HAProxy proxy accessible",
+      "details": {
+        "status": 503
+      }
+    },
+    {
+      "service": "web_api",
+      "test": "CLIP Image Search",
+      "level": "ADVANCED",
+      "passed": false,
+      "duration": 0.005880594253540039,
+      "message": "Image search endpoint not found",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "OCR Service",
+      "level": "ADVANCED",
+      "passed": false,
+      "duration": 0.004737377166748047,
+      "message": "OCR endpoint not found",
+      "details": null
+    },
+    {
+      "service": "integration",
+      "test": "Step 1: Search",
+      "level": "INTEGRATION",
+      "passed": false,
+      "duration": 0.005021095275878906,
+      "message": "Search failed with 404",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "Concurrent Requests (50)",
+      "level": "ADVANCED",
+      "passed": true,
+      "duration": 16.41287064552307,
+      "message": "Handled 50/50 requests",
+      "details": {
+        "avg_response": "0.328s",
+        "failed": 0
+      }
+    }
+  ]
+}

@@ -108,12 +108,15 @@ RUN chmod +x /app/start.sh /app/healthcheck.sh && \
 
 # Default environment variables
 ENV PORT=8000
-ENV WORKERS=1
+ENV WORKERS=4
 ENV SERVICE_TYPE=web
+ENV PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
+ENV METRIC_PREFIX=cumpair_
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/logs /app/uploads /app/models && \
-    chmod -R 755 /app/logs /app/uploads /app/models
+RUN mkdir -p /app/logs /app/uploads /app/models /tmp/prometheus_multiproc && \
+    chmod -R 755 /app/logs /app/uploads /app/models && \
+    chmod 777 /tmp/prometheus_multiproc
 
 # Health check with adaptive timeout
 HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \

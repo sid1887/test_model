@@ -19,23 +19,26 @@ class RedisClient {
     }
 
     try {
+      // Construct Redis URL (Redis v4+ format)
+      const redisHost = process.env.REDIS_HOST || 'localhost';
+      const redisPort = process.env.REDIS_PORT || 6379;
+      const redisPassword = process.env.REDIS_PASSWORD;
+      
+      const redisUrl = redisPassword
+        ? `redis://:${redisPassword}@${redisHost}:${redisPort}`
+        : `redis://${redisHost}:${redisPort}`;
+      
       this.client = redis.createClient({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: process.env.REDIS_PORT || 6379,
-        password: process.env.REDIS_PASSWORD || undefined,
-        retry_strategy: (options) => {
-          if (options.error && options.error.code === 'ECONNREFUSED') {
-            logger.warn('Redis server connection refused - continuing without caching');
-            return false; // Don't retry
-          }
-          if (options.total_retry_time > 3000) {
-            logger.warn('Redis retry time exhausted - continuing without Redis');
-            return false;
-          }
-          if (options.attempt > 2) {
-            logger.warn('Redis max retry attempts reached - continuing without Redis');
-            return false;
-          }          return Math.min(options.attempt * 100, 1000);
+        url: redisUrl,
+        socket: {
+          reconnectStrategy: (retries) => {
+            if (retries > 2) {
+              logger.warn('Redis max retry attempts reached - continuing without Redis');
+              return false; // Stop retrying
+            }
+            return Math.min(retries * 100, 1000); // Exponential backoff
+          },
+          connectTimeout: 3000
         }
       });
 

@@ -2,10 +2,7 @@ version: '3.8'
 
 services:
   captcha-solver:
-    image: captcha-solver:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: test_model-web:latest
     ports:
       - "9001:9001"
     environment:

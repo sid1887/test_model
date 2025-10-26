@@ -1,5 +1,6 @@
 # Multi-stage build for React Vite app
-FROM node:18-alpine AS builder
+# Use full node image instead of alpine to avoid SWC compilation issues
+FROM node:18 AS builder
 
 # Set working directory
 WORKDIR /app
@@ -7,13 +8,15 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with legacy peer deps and increased memory
+RUN npm ci --legacy-peer-deps --maxsockets=1 || \
+    (rm -rf node_modules package-lock.json && npm install --legacy-peer-deps)
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the application with increased memory
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 # Production stage

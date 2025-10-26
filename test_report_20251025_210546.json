@@ -1,0 +1,347 @@
+{
+  "timestamp": "2025-10-25T21:05:46.436534",
+  "summary": {
+    "total_tests": 21,
+    "passed": 8,
+    "failed": 13,
+    "pass_rate": 38.095238095238095,
+    "duration": 0.9288959503173828
+  },
+  "services": {
+    "redis_main": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "redis_captcha": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "redis_proxy": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "postgres": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 1,
+      "response_time": 0.0,
+      "errors": [
+        "Missing tables: ['users']"
+      ]
+    },
+    "web_api": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 6,
+      "response_time": 0.0,
+      "errors": [
+        "Health check failed: Server disconnected",
+        "Server disconnected",
+        "Server disconnected",
+        "Server disconnected",
+        "Server disconnected",
+        "Handled 0/50 requests"
+      ]
+    },
+    "frontend": {
+      "healthy": false,
+      "tests_passed": 1,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "worker": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 1,
+      "response_time": 0.0,
+      "errors": [
+        "Server disconnected"
+      ]
+    },
+    "scraper": {
+      "healthy": true,
+      "tests_passed": 2,
+      "tests_failed": 0,
+      "response_time": 0.008304357528686523,
+      "errors": []
+    },
+    "captcha_solver": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 2,
+      "response_time": 0.0,
+      "errors": [
+        "Health check failed: Server disconnected",
+        "Server disconnected"
+      ]
+    },
+    "proxy_api": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 2,
+      "response_time": 0.0,
+      "errors": [
+        "Health check failed: Server disconnected",
+        "Server disconnected"
+      ]
+    },
+    "haproxy": {
+      "healthy": false,
+      "tests_passed": 2,
+      "tests_failed": 0,
+      "response_time": 0.0,
+      "errors": []
+    },
+    "integration": {
+      "healthy": false,
+      "tests_passed": 0,
+      "tests_failed": 1,
+      "response_time": 0.0,
+      "errors": [
+        "Server disconnected"
+      ]
+    }
+  },
+  "results": [
+    {
+      "service": "redis_main",
+      "test": "Connection & Operations",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.29761266708374023,
+      "message": "Redis fully operational",
+      "details": {
+        "version": "7.4.6",
+        "port": 6379
+      }
+    },
+    {
+      "service": "redis_captcha",
+      "test": "Connection & Operations",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.02443718910217285,
+      "message": "Redis fully operational",
+      "details": {
+        "version": "7.4.6",
+        "port": 6380
+      }
+    },
+    {
+      "service": "redis_proxy",
+      "test": "Connection & Operations",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.036243438720703125,
+      "message": "Redis fully operational",
+      "details": {
+        "version": "7.4.6",
+        "port": 6381
+      }
+    },
+    {
+      "service": "postgres",
+      "test": "Schema Validation",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.3017261028289795,
+      "message": "Missing tables: ['users']",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.010663270950317383,
+      "message": "Health check failed: Server disconnected",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "OpenAPI Docs",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.005564689636230469,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "Real-Time Search API",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.00480198860168457,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "frontend",
+      "test": "Page Load",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.03331112861633301,
+      "message": "Frontend accessible",
+      "details": {
+        "size": "1881 bytes"
+      }
+    },
+    {
+      "service": "worker",
+      "test": "Celery Worker Health",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.006430387496948242,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "scraper",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.008304357528686523,
+      "message": "Service healthy",
+      "details": {
+        "status": "healthy",
+        "response_time": "0.008s"
+      }
+    },
+    {
+      "service": "scraper",
+      "test": "Status Endpoint",
+      "level": "INTERMEDIATE",
+      "passed": true,
+      "duration": 0.025909423828125,
+      "message": "Scraper status available",
+      "details": {
+        "status": "healthy",
+        "service": "scraper",
+        "timestamp": "2025-10-25T15:35:46.242Z",
+        "version": "1.0.0",
+        "uptime": 148.49496112,
+        "redis": {
+          "isConnected": true,
+          "host": "redis",
+          "port": "6379"
+        },
+        "scraper": {
+          "totalRequests": 0,
+          "successfulRequests": 0,
+          "failedRequests": 0,
+          "averageResponseTime": 0,
+          "startTime": 1761406398811,
+          "uptime": 147431,
+          "successRate": "0%",
+          "requestsPerMinute": 0,
+          "activeBrowsers": 0
+        }
+      }
+    },
+    {
+      "service": "captcha_solver",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.00745081901550293,
+      "message": "Health check failed: Server disconnected",
+      "details": null
+    },
+    {
+      "service": "captcha_solver",
+      "test": "Solver Info",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.005304813385009766,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "proxy_api",
+      "test": "Health Endpoint",
+      "level": "BASIC",
+      "passed": false,
+      "duration": 0.007179975509643555,
+      "message": "Health check failed: Server disconnected",
+      "details": null
+    },
+    {
+      "service": "proxy_api",
+      "test": "Proxy List",
+      "level": "INTERMEDIATE",
+      "passed": false,
+      "duration": 0.0048198699951171875,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "haproxy",
+      "test": "Stats Page",
+      "level": "BASIC",
+      "passed": true,
+      "duration": 0.010156631469726562,
+      "message": "HAProxy stats accessible",
+      "details": null
+    },
+    {
+      "service": "haproxy",
+      "test": "Proxy Endpoint",
+      "level": "INTERMEDIATE",
+      "passed": true,
+      "duration": 0.006544351577758789,
+      "message": "HAProxy proxy accessible",
+      "details": {
+        "status": 503
+      }
+    },
+    {
+      "service": "web_api",
+      "test": "CLIP Image Search",
+      "level": "ADVANCED",
+      "passed": false,
+      "duration": 0.0014853477478027344,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "AI Models Status",
+      "level": "ADVANCED",
+      "passed": false,
+      "duration": 0.005929470062255859,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "integration",
+      "test": "Step 1: Search",
+      "level": "INTEGRATION",
+      "passed": false,
+      "duration": 0.0032782554626464844,
+      "message": "Server disconnected",
+      "details": null
+    },
+    {
+      "service": "web_api",
+      "test": "Concurrent Requests (50)",
+      "level": "ADVANCED",
+      "passed": false,
+      "duration": 0.10342121124267578,
+      "message": "Handled 0/50 requests",
+      "details": {
+        "avg_response": "0.002s",
+        "failed": 50
+      }
+    }
+  ]
+}

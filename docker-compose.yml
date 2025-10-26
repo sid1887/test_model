@@ -40,6 +40,15 @@ services:
     environment:
       - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
       - REDIS_URL=redis://redis:6379
+      - SERVICE_NAME=${SERVICE_NAME:-cumpair}
+      - DEMO_MODE=${DEMO_MODE:-false}
+      - APP_NAME=${APP_NAME:-Cumpair}
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
+      - METRIC_PREFIX=cumpair_
+      - SERVICE_TYPE=web
+      - WORKERS=4
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,14 +66,17 @@ services:
 
   # Celery worker for background tasks
   worker:
-    build: .
+    image: test_model-web:latest
     profiles: ['worker']
     command: celery -A app.worker worker --loglevel=info
     environment:
       - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
       - REDIS_URL=redis://redis:6379
+      - SERVICE_TYPE=worker
     depends_on:
       - web
+      - redis
+      - postgres
     volumes:
       - ./uploads:/app/uploads
       - ./models:/app/models
@@ -72,7 +84,7 @@ services:
 
   # Celery Flower monitoring
   flower:
-    build: .
+    image: test_model-web:latest
     profiles: ['worker']
     command: celery -A app.worker flower --port=5555
     ports:
@@ -116,7 +128,10 @@ services:
     ports:
       - "8080:3000"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+      - VITE_SERVICE_NAME=${VITE_SERVICE_NAME:-cumpair}
+      - VITE_DEMO_MODE=${VITE_DEMO_MODE:-false}
+      - VITE_DEBUG_MODE=${VITE_DEBUG_MODE:-false}
     depends_on:
       - web
     volumes:

@@ -1,0 +1,5 @@
+{
+  "query": "wireless mouse",
+  "sites": ["amazon", "walmart", "ebay"],
+  "max_results": 3
+}

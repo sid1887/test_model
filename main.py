@@ -12,7 +12,9 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.routes import analysis, analysis_new, comparison, health, price_comparison, metrics
+from app.api.routes import analysis, analysis_new, comparison, health, price_comparison, metrics, seed, user, retailers, ai, health_services
+from app.api.routes import alerts, smart_lists  # New feature routes
+from app.api.routes import analytics_features  # Analytics & forecasting
 from app.core.monitoring import setup_monitoring
 from app.core.middleware import setup_middleware
 
@@ -51,6 +53,30 @@ async def lifespan(app: FastAPI):
         await clip_service.initialize()
     except Exception as e:
         print(f"Warning: Could not initialize CLIP service: {e}")
+    
+    # Initialize HuggingFace connector
+    try:
+        from app.services.huggingface_connector import get_hf_connector
+        hf = get_hf_connector()
+        print(f"🤗 HuggingFace connector initialized (configured: {hf.is_configured()})")
+    except Exception as e:
+        print(f"Warning: Could not initialize HF connector: {e}")
+    
+    # Initialize Voice STT service
+    try:
+        from app.services.voice_stt import get_stt_service
+        stt = await get_stt_service()
+        print(f"🎤 Voice STT service initialized (provider: {stt.provider})")
+    except Exception as e:
+        print(f"Warning: Could not initialize Voice STT: {e}")
+    
+    # Initialize Image Processor
+    try:
+        from app.services.image_processor import get_image_processor
+        processor = await get_image_processor()
+        print(f"🖼️  Image Processor initialized")
+    except Exception as e:
+        print(f"Warning: Could not initialize Image Processor: {e}")
 
     yield
 
@@ -86,11 +112,21 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Include routers
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
+app.include_router(health_services.router, tags=["health-services"])
 app.include_router(metrics.router, tags=["monitoring"])
+app.include_router(seed.router, tags=["seed"])
+app.include_router(user.router, tags=["user"])
+app.include_router(retailers.router, tags=["retailers"])
+app.include_router(ai.router, tags=["ai"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
 app.include_router(analysis_new.router, prefix="/api/v1", tags=["analysis-ai"])
 app.include_router(comparison.router, prefix="/api/v1", tags=["comparison"])
 app.include_router(price_comparison.router, tags=["price-comparison"])
+
+# Include new feature routes
+app.include_router(alerts.router, tags=["price-alerts"])
+app.include_router(smart_lists.router, tags=["smart-lists"])
+app.include_router(analytics_features.router, tags=["analytics-features"])
 
 # Include analytics router for enhanced data pipelines and pricing analytics
 try:

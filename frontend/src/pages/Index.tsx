@@ -1,54 +1,47 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, TrendingUp, Shield, Zap, Store, Settings } from 'lucide-react';
+import { Sparkles, TrendingUp, Shield, Zap, Store } from 'lucide-react';
 import { RetailerFilterSearch, SearchFilters } from '@/components/ui/retailer-filter-search';
 import { EnhancedSearchResults, SearchResult } from '@/components/ui/enhanced-search-results';
 import { RetailerDashboard } from '@/components/ui/retailer-dashboard';
 import { ValueScoredProductCard } from '@/components/ui/value-scored-product-card';
+import { SeedProductCard } from '@/components/ui/product-card';
+import { SearchBar, SearchFilters as SeedSearchFilters } from '@/components/ui/search-bar';
 import { ComparisonMatrix } from '@/components/ui/comparison-matrix';
 import { TrendChart } from '@/components/ui/trend-chart';
 import { MagneticButton } from '@/components/ui/magnetic-button';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { PageTransition } from '@/components/ui/page-transition';
 import { ScreenReaderAnnouncement } from '@/hooks/useAccessibility';
 import { FloatingElements } from '@/components/ui/floating-elements';
-import { ResponsiveNavigation } from '@/components/ui/responsive-navigation';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Header } from '@/components/ui/header';
+import { GeolocationConsent } from '@/components/ui/geolocation-consent';
+
 import { ScrollReveal } from '@/components/ui/scroll-reveal';
 import { SuspenseWrapper } from '@/components/ui/loading-system';
 import { ProductCardSkeleton } from '@/components/ui/skeleton-loader';
 import { Product } from '@/types/product';
+import { useSeedProducts } from '@/hooks/useSeedData';
 
 const Index = () => {
   const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(false);
+  const [compareProducts, setCompareProducts] = useState<Set<string>>(new Set());
+  const [_isLoading, _setIsLoading] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const [showComparison, setShowComparison] = useState(false);
   const [showRetailerDashboard, setShowRetailerDashboard] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [currentQuery, setCurrentQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const [seedSearchFilters, setSeedSearchFilters] = useState({});
 
-  // Enhanced navigation with smart features
-  const navigationItems = [
-    { label: 'Home', href: '/' },
-    { label: 'AI Search', href: '/search' },
-    { label: 'Price Alerts', href: '/alerts' },
-    { label: 'Smart Lists', href: '/lists' },
-    { label: 'Analytics', href: '/analytics' },
-    { 
-      label: 'Retailers', 
-      href: '/retailers',
-      children: [
-        { label: 'Dashboard', href: '/retailers/dashboard' },
-        { label: 'Configuration', href: '/retailers/config' },
-        { label: 'Performance', href: '/retailers/performance' }
-      ]
-    }
-  ];
+  // Fetch seed products
+  const { 
+    data: seedData, 
+    loading: seedLoading, 
+    isOffline 
+  } = useSeedProducts({ page: 1, page_size: 12, ...seedSearchFilters });
 
   // Enhanced mock product data with AI-powered insights
   const featuredProducts: Product[] = [
@@ -154,6 +147,10 @@ const Index = () => {
     });
   };
 
+  const handleSeedSearch = (query: string, filters: SeedSearchFilters) => {
+    setSeedSearchFilters({ ...filters, search: query });
+  };
+
   // Enhanced features with AI insights
   const features = [
     {
@@ -177,25 +174,6 @@ const Index = () => {
       description: "Sub-100ms product matching with personalized recommendations based on your shopping DNA"
     }
   ];
-
-  // ... keep existing code (logo definition)
-  const logo = (
-    <motion.div
-      className="flex items-center gap-3"
-      whileHover={{ scale: 1.05 }}
-    >
-      <motion.div 
-        className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg"
-        whileHover={{ rotate: 180 }}
-        transition={{ duration: 0.6 }}
-      >
-        <Sparkles className="w-6 h-6 text-white" />
-      </motion.div>
-      <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-        Cumpair
-      </h1>
-    </motion.div>
-  );
 
   const selectedProductsData = featuredProducts.filter(p => selectedProducts.has(p.id));
 
@@ -291,6 +269,9 @@ const Index = () => {
   return (
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-black dark:to-purple-900 transition-all duration-700 relative overflow-hidden">
+        {/* Geolocation Consent */}
+        <GeolocationConsent />
+        
         {/* Screen reader announcements */}
         <ScreenReaderAnnouncement message={announcement} />
         
@@ -340,19 +321,15 @@ const Index = () => {
           />
         </div>
 
-        {/* Enhanced Responsive Navigation */}
-        <ResponsiveNavigation
-          items={navigationItems}
-          logo={logo}
-          actions={<ThemeToggle />}
-        />
+        {/* Header with Working Navigation */}
+        <Header />
 
         {/* Enhanced Hero Section */}
         <section className="relative z-10 text-center py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12">
             <ScrollReveal direction="up" delay={0.2}>
               <motion.h2 
-                className="text-4xl sm:text-6xl lg:text-8xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent leading-tight"
+                className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight"
                 animate={{
                   backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
                 }}
@@ -365,19 +342,22 @@ const Index = () => {
                   backgroundSize: "200% 200%",
                 }}
               >
-                AI-Powered Shopping
+                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Smarter Shopping.
+                </span>
                 <br />
-                <span className="text-2xl sm:text-4xl lg:text-6xl">Revolution</span>
+                <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                  Better Prices.
+                </span>
               </motion.h2>
             </ScrollReveal>
             
             <ScrollReveal direction="up" delay={0.4}>
               <motion.p
-                className="text-lg sm:text-xl lg:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed px-4"
+                className="text-lg sm:text-xl lg:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed px-4 font-normal"
                 whileHover={{ scale: 1.02 }}
               >
-                Experience next-generation e-commerce with GPT-4 powered discovery, predictive analytics, 
-                blockchain-verified reviews, and personalized AI recommendations that save you time and money
+                Search and compare products and local deals across stores — fast, accurate, and personalised
               </motion.p>
             </ScrollReveal>            
             
@@ -411,22 +391,17 @@ const Index = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="up" delay={0.8}>
-              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center px-4">
+              <div className="flex justify-center items-center px-4">
                 <MagneticButton 
-                  onClick={() => console.log('Start AI shopping')}
-                  className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg"
+                  onClick={() => {
+                    // Scroll to search results or featured products
+                    const searchSection = document.querySelector('#featured-products');
+                    searchSection?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-8 py-4 text-lg font-semibold"
                 >
-                  Start AI Shopping
+                  Start Shopping
                 </MagneticButton>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full sm:w-auto"
-                >
-                  <button className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold text-purple-600 dark:text-purple-400 border-2 border-purple-600/30 rounded-2xl backdrop-blur-md hover:bg-purple-600/10 transition-all duration-300">
-                    Watch AI Demo
-                  </button>
-                </motion.div>
               </div>
             </ScrollReveal>
           </div>
@@ -512,6 +487,130 @@ const Index = () => {
           </div>
         </section>
 
+        {/* Seed Products Section - Demo Data */}
+        <section id="seed-products" className="relative z-10 py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background to-muted/20">
+          <div className="max-w-7xl mx-auto">
+            {/* Demo Mode Banner */}
+            {isOffline && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8 p-4 bg-amber-100 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg"
+              >
+                <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <span className="font-medium">Demo Mode Active</span>
+                  <span className="text-sm">— Showing sample products from our catalog</span>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Section Header */}
+            <ScrollReveal direction="up">
+              <div className="text-center mb-12 sm:mb-16">
+                <motion.h3 
+                  className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent px-4"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  Featured Products
+                </motion.h3>
+                <motion.p 
+                  className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  Browse our collection from top retailers
+                </motion.p>
+              </div>
+            </ScrollReveal>
+
+            {/* Search Bar */}
+            <div className="mb-8 sm:mb-12">
+              <SearchBar 
+                onSearch={handleSeedSearch}
+                isLoading={seedLoading}
+                isOffline={isOffline}
+                showFilters={true}
+              />
+            </div>
+
+            {/* Product Count */}
+            {seedData && !seedLoading && (
+              <div className="mb-6 text-center">
+                <p className="text-muted-foreground">
+                  Showing <span className="font-semibold text-foreground">{seedData.products.length}</span> of{' '}
+                  <span className="font-semibold text-foreground">{seedData.total}</span> products
+                </p>
+              </div>
+            )}
+
+            {/* Products Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+              {seedLoading ? (
+                Array.from({ length: 12 }).map((_, i) => (
+                  <ScrollReveal key={i} direction="up" delay={i * 0.05}>
+                    <div className="animate-pulse">
+                      <div className="bg-muted rounded-lg h-96"></div>
+                    </div>
+                  </ScrollReveal>
+                ))
+              ) : seedData?.products && seedData.products.length > 0 ? (
+                seedData.products.map((product, index) => (
+                  <ScrollReveal key={product.id} direction="up" delay={index * 0.05}>
+                    <SeedProductCard
+                      {...product}
+                      isSelected={compareProducts.has(product.id)}
+                      isWishlisted={likedProducts.has(product.id)}
+                      onCompare={(id) => {
+                        setCompareProducts(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(id)) {
+                            newSet.delete(id);
+                          } else {
+                            newSet.add(id);
+                          }
+                          return newSet;
+                        });
+                      }}
+                      onWishlist={(id) => {
+                        setLikedProducts(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(id)) {
+                            newSet.delete(id);
+                          } else {
+                            newSet.add(id);
+                          }
+                          return newSet;
+                        });
+                      }}
+                    />
+                  </ScrollReveal>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-muted-foreground text-lg">No products found. Try adjusting your filters.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Load More Button */}
+            {seedData && seedData.products.length < seedData.total && (
+              <div className="text-center mt-12">
+                <button
+                  onClick={() => {
+                    // TODO: Implement pagination
+                    console.log('Load more clicked - pagination coming soon');
+                  }}
+                  className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300"
+                >
+                  Load More Products
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* Enhanced Featured Products Section */}
         <section className="relative z-10 py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
@@ -537,7 +636,7 @@ const Index = () => {
               loadingMessage="Loading AI-curated products..."
             >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                {isLoading ? (
+                {searchLoading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <ScrollReveal key={i} direction="up" delay={i * 0.1}>
                       <ProductCardSkeleton />

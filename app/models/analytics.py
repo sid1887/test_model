@@ -5,7 +5,7 @@ Database models for price forecasts and sentiment analysis
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, DECIMAL, JSON, ForeignKey, Float
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.core.database import Base
 
 class PriceForecast(Base):
     """Model for storing price forecast data"""

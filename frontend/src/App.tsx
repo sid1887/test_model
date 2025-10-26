@@ -8,6 +8,9 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import LazyIndex from "./pages/LazyIndex";
 import NotFound from "./pages/NotFound";
+import { PriceAlertsPage } from "./pages/PriceAlerts";
+import { SmartListsPage } from "./pages/SmartLists";
+import { AnalyticsPage } from "./pages/Analytics";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +32,9 @@ const App = () => (
             <ErrorBoundary>
               <Routes>
                 <Route path="/" element={<LazyIndex />} />
+                <Route path="/alerts" element={<PriceAlertsPage />} />
+                <Route path="/lists" element={<SmartListsPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

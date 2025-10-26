@@ -1,0 +1,484 @@
+A — Big picture: query path vs crawl path (the core idea)
+
+Make a clean separation between:
+
+Query Path (user-facing, sub-second) — reads from fast indexes & caches (Redis, search index, FAISS, Postgres). Must be synchronous and always fast.
+
+Crawl/Index Path (background, scalable) — performs scraping, parsing, ML inference, and writes normalized records + embeddings into the index/database.
+
+Why this matters: users get instant results from the Query Path. The Crawl Path updates the index asynchronously and continuously so freshness improves over time. This is how search engines behave and is the single biggest leverage point for reducing perceived latency.
+
+B — How to build a lightning-fast scraper / search engine
+1) Architecture for speed
+
+Index-first approach (must implement immediately)
+
+Maintain an indexed store of canonical product records (product_id, normalized title, canonical image, list of retailer listings with price & timestamp, ASIN/SKU, embeddings).
+
+User query → search index + FAISS → return results instantly.
+
+If a product’s listing is older than TTL, return cached result AND enqueue a background refresh (stale-while-revalidate UX).
+
+Components
+
+Fast read stack: Redis cache (hot results), OpenSearch/Elasticsearch (text search) or Postgres fulltext + pgvector (if you prefer fewer infra components) + FAISS (vector nearest neighbors).
+
+Crawl cluster: Playwright cluster (for complex JS sites) + Scrapy spiders (for static/fast pages) — both fed by a task queue (Redis/Celery or Redis Streams).
+
+Index builder: service that normalizes scraped payloads, deduplicates, computes embeddings and upserts into DB + FAISS.
+
+ML worker pool: asynchronous Celery tasks for CLIP/embedding computation, YOLO detection, OCR, etc.
+
+2) Scraper concurrency & pooling
+
+Use Playwright/Browser pools instead of launching a full browser per job. Pre-warm N browser processes and create new contexts per page. Reuse contexts where safe.
+
+Playwright cluster patterns
+
+Limit concurrency per domain (rate-limit per site).
+
+Use a central queue (Redis) and multiple worker containers each running a Playwright worker pool.
+
+Scrapy for bulk: For thousands of simple pages, Scrapy outruns browser automation. Use Scrapy for catalog pages, sitemaps, RSS, and Scrapy + Splash (if rendering required) for lightweight JS.
+
+3) Prioritization & scheduling (smart crawling)
+
+Priority queue: top popular SKUs + items requested by users get high priority. Low-traffic SKUs are crawled at lower frequency.
+
+Freshness policy by category:
+
+Stocks/crypto: near real-time (seconds).
+
+Groceries: 1–3 hours.
+
+Electronics: 6–24 hours.
+
+Adaptive scheduling: if a retailer shows high volatility, increase frequency automatically. Store last price, compute volatility, and raise schedule priority.
+
+4) Delta crawling & cheap checks
+
+Use HTTP headers (ETag / Last-Modified) and lightweight HEAD requests to detect changes before full fetch.
+
+Store page fingerprints (hash of relevant HTML regions). Only fully parse when fingerprints change.
+
+For product pages, attempt to detect canonical IDs (ASIN/SKU) quickly: if found, you can avoid heavy parsing and map record immediately.
+
+5) Selector resiliency & LLM fallback
+
+Primary: site-specific CSS/XPath selectors written and tested.
+
+Secondary: when selectors break, use an LLM (small CPU-friendly HF model) to convert HTML → JSON using prompts (HTML-to-structured). Run the LLM path only when selectors fail (rare), so cost is bounded.
+
+Tertiary: supervised repair jobs — automatically create a ticket with a sample page and predicted selectors for human review.
+
+6) Identity & image-first matching (big speed win)
+
+Use CLIP embeddings and FAISS to identify products from images or thumbnails — if an uploaded image matches a canonical product with high confidence, map it to product record and fetch retailer listings without scraping a full page.
+
+This reduces heavy scraping for many queries (image → instant match → prices in DB).
+
+7) Anti-bot & resilience
+
+Proxy rotation with health scoring (your proxy manager service). Prefer a mix of datacenter + residential proxies for stubborn sites.
+
+User-Agent rotation and fingerprint diversity.
+
+Use stealth plugin for Playwright/Puppeteer.
+
+CAPTCHA escalation: if page requires CAPTCHA, queue job for the CAPTCHA solver (self-hosted 2captcha path) or human-in-the-loop analysis.
+
+8) Batch inference & model quantization
+
+Batch CLIP/embedding inference in the ML worker to amortize overhead on CPU.
+
+Use ONNX or onnxruntime (quantized int8) for CPU acceleration if possible.
+
+Use smaller models (ViT-B/32, all-MiniLM) for CPU-first; reserve heavy models for queued offline jobs.
+
+9) Search & ranking
+
+Combine textual search (OpenSearch or Postgres full-text) + vector similarity (FAISS) + signals (price freshness, retailer reliability, shipping cost, user behavior) in a ranking function.
+
+Precompute ranking features in background for frequently viewed items to keep query latency sub-100ms.
+
+10) Caching & UX
+
+Always return cached/known result with a freshness flag; the frontend shows “results updated X minutes ago”. If stale, start background refresh and optionally SSE notify the client when new results arrive.
+
+Implement CDN for frontend assets and an HTTP cache for JSON responses (short TTL for dynamic endpoints).
+
+C — Real parallelism across all services (so workstreams don’t block each other)
+Principle: services are loosely coupled via events
+
+Use event-driven architecture: events carry minimal payloads (object id, timestamp, change type).
+
+Transport: Redis Streams (fast, simple) or Kafka if you expect multi-node durable streams later. For now Redis Streams is excellent and you already have Redis.
+
+Event examples:
+
+product.seen → triggers normalization job.
+
+product.stale → triggers scrape job.
+
+image.uploaded → triggers AI inference pipeline.
+
+alert.created → schedules monitoring jobs.
+
+Workers subscribe to topics independently; they can be scaled horizontally.
+
+Teaming pattern for a solo dev (but works if you expand)
+
+Create 5 parallel branches/workstreams (same as WS-1..WS-5). Each stream has clear APIs and mock contracts so progress is independent.
+
+Define API contracts early (OpenAPI). While WS-1 builds scrapers, WS-2 and frontend can mock endpoints using stable contract stubs and proceed. Use contract tests in CI.
+
+Concurrency & QoS
+
+Task queues with priorities and rate-limits: use Celery routing keys or Redis Streams consumer groups to separate high-priority (user triggered) vs low-priority (background bulk indexing) jobs.
+
+Backpressure: monitor queue depth; dynamically throttle crawling concurrency if queue/backlog exceeds target.
+
+Auto-scale workers (locally manual scale today; later autoscale in k8s): spawn additional Playwright worker containers when input queue high.
+
+Dev flow for independence
+
+Use mock services during development: e.g., a fake ai-engine that returns embeddings so frontend and API can proceed.
+
+Use feature flags to enable/disable heavy ML jobs.
+
+Keep all contracts and test clients in repo: tools/mock_ai.py, tools/mock_scraper.py.
+
+D — Observability, SLOs, testing & reliability
+Key metrics (implement early)
+
+Scraper: pages/s, page latency, failure % per site, CAPTCHA hits.
+
+Queue: Celery queue depth, processing latency, tasks/sec.
+
+Index: FAISS entries, index build time, index stale count.
+
+Query: API p95/p99 response time, cache hit ratio.
+
+ML: average inference latency, batch sizes, failed inferences.
+
+Set SLOs:
+
+Query p95 < 500ms (target <200ms for cached hot results)
+
+Time to surface a newly requested product (first index attempt) < 30s ideally for high-priority items; background full parse within minutes.
+
+Scraper per-site success rate > 95%.
+
+Logging & tracing
+
+Structured JSON logs with request_id and job_id. Correlate logs across services.
+
+Use lightweight tracing (OpenTelemetry) if possible; otherwise ensure logs have consistent IDs.
+
+Testing
+
+Unit tests for normalization/parsers.
+
+Integration tests that replay HTML fixtures against the parser.
+
+End-to-end: scripted sequences that simulate a user search → cached result → enqueue refresh → update delivered via SSE.
+
+Load testing: Locust against /api/search and the Playwright cluster jobs.
+
+E — Concrete prioritized plan (30 / 90 / 180 days)
+First 30 days (most critical; biggest ROI)
+
+Implement index-first flow: canonical product store + query API that reads from it. Add stale flag and enqueue refresh if stale.
+
+Quick Playwright pool: convert single Playwright launches to a pooled worker approach (1 container pre-warmed with N browser contexts).
+
+Redis-based task queue with prioritized keys: separate high-priority (user triggered) vs bulk streams.
+
+CLIP image-match shortcut: compute embeddings for seed catalog and wire image upload → FAISS → if match confidence high, return product instantly (skip heavy scraping).
+
+Prometheus & Celery metrics: monitor queue depth & worker latency.
+
+Frontend UX change: show cached result + spinner for background refresh; SSE for update.
+
+Expected outcome: Most interactive user searches return within 200–500ms; heavy scrapes run asynchronously.
+
+Next 60 days (30–90 days)
+
+Full Playwright cluster & Scrapy mix: run Playwright for JS heavy pages and Scrapy for bulk page crawling. Add domain-based routing.
+
+Index builder pipeline: normalize, dedupe, compute embeddings (batched) and upsert into Postgres + FAISS.
+
+Proxy manager + CAPTCHA flow: integrate proxy rotation and escalate to captcha-solver only when required; track per-site health.
+
+Basic ranking & freshness signals: combine vector/text hits + freshness + price delta in ranking.
+
+Batch inference & ONNX quantization: experiment with onnxruntime for CPU acceleration of heavy models.
+
+Expected outcome: crawl throughput increases, fewer full page fetches, and sustained lower latency for a majority of queries.
+
+90–180 days (scale & polish)
+
+Refine scheduling policies: volatility-driven frequency, popularity-driven prefetching.
+
+Add OpenSearch or pgvector depending on scale: if text search is heavy, introduce OpenSearch; otherwise pgvector+Postgres might be sufficient for moderate scale.
+
+LLM fallback repair: integrate a small HF model in fallback path for HTML→JSON when selectors break.
+
+Autoscaling & infra: consider k8s or horizontal container scaling for Playwright workers and Celery workers.
+
+Community readiness: documentation, dashboards, seed datasets, contributors guide.
+
+F — Concrete knobs & config you will tune
+
+Playwright concurrency per container (start small -> 4 contexts).
+
+Scrapy concurrency and download delay (per domain).
+
+Redis Streams consumer group size / Celery concurrency = number of CPU cores * 1-2.
+
+FAISS index type (HNSW for recall with moderate RAM; IVF for extremely large data).
+
+Embedding batch size (tune for CPU memory and throughput).
+
+G — Quick Copilot prompts to speed implementation
+
+(Use these directly with Copilot)
+
+“Scaffold a Playwright pool worker that reads jobs from Redis queue scrape:jobs, pre-warms 3 browser instances, rotates proxies from proxy-manager endpoint, and returns {status, html, url, fetch_time}. Include retry and backoff logic.”
+
+“Create a Celery task tasks.compute_embedding_batch(batch) that loads OpenCLIP lazily, computes embeddings for a list of image paths, writes vectors to FAISS incrementally and updates the product table with vector ids.”
+
+“Generate FastAPI endpoint /api/search that queries Redis cache first, then FAISS + OpenSearch (fallback to Postgres) and returns results with freshness flag and refresh_enqueued boolean.”
+
+H — Measured targets (what “lightning fast” means)
+
+Hot result latency: 50–200ms (Redis + index lookup).
+
+Cold-path initial response: <2s (cached stub + background refresh kicked).
+
+Crawl throughput: 100–1000 pages/sec across cluster (depends on proxies & budget).
+
+FAISS nearest-neighbor query: <50ms for top-10 on CPU with optimized index.
+
+
+
+1 — Three “Big Idea” UI concepts (pick one as canonical)
+
+A short creative palette so the product looks unique from day one.
+
+A — Neon Minimal (Bolt-inspired)
+
+Palette: deep charcoal backgrounds, electric teal accent, warm white text.
+
+Feel: high-contrast, kinetic motion, bold micro-animations (card lifts, price “pops”).
+
+Use when you want slick, professional fintech-like vibe.
+
+B — Friendly Light (Lovable-inspired)
+
+Palette: soft gradients (peach → coral), rounded shapes, playful iconography.
+
+Feel: warm, human-centric; friendly onboarding, microcopy with personality.
+
+Use when audience is retail consumers wanting simplicity.
+
+C — Modern Data Studio (product + analytics hybrid)
+
+Palette: neutral base, one authoritative accent (indigo), subtle glass card effects.
+
+Feel: precise charts, data-rich panels, reduced motion default.
+
+Use when you want to look like a professional analytics product.
+
+(Pick a mode; the same components and motion language can adapt.)
+
+2 — Signature UI moments (the wow triggers)
+
+Implement these and your product instantly feels premium.
+
+Image Launch — “Snap to Match”
+
+Large floating camera button in search. On capture, animate a fast circular “ripple” while a tiny CLIP badge + confidence percentage slides in. If a match is found, the matched product card blooms into place with a confetti-like highlight for new low price.
+
+Search Instantness — “Ghost Results”
+
+As user types, show blurred “ghost” of the top cached result’s product card (image + price) instantly (50–100ms), then morph into full card when backend returns fresh data. This visual morphing gives perceived <100ms response.
+
+Price Drop Micro-Animation
+
+When a price drops (alerts or product page), the price does a soft downward animation and turns a celebratory green, accompanied by a fast “spark” animation around the discount badge.
+
+Smart Compare Modal
+
+Clicking “Compare” opens a centered modal with a three-column comparison; animate columns sliding in and column headers stick with subtle shadows. Include small microcharts in each column that play a 1-second sparkline animation.
+
+SSE Live Jobs — “Work In Progress Ribbon”
+
+Long-running jobs (compare, scrape) appear as a thin ribbon at the top of the page with steps and micro-checkmarks as they proceed. Tapping the ribbon opens a detail flyout showing logs / progress.
+
+Voice Interaction Sequence
+
+On mic tap, the header glows, a friendly voice icon pulses, and interim partial transcripts update live. When done, the search input auto-populates and triggers ghost results.
+
+3 — Hero components & behaviors (developer-spec + UX behavior)
+
+Each component includes behavior, accessibility and data contract.
+
+Header (sticky, compact)
+
+Elements: Logo (left), Global Search (center), Quick actions (camera, mic), User menu (right), Theme toggle.
+
+Behavior: On scroll down compress to small header (logo + condensed search).
+
+Accessibility: All controls accessible via keyboard; ARIA-labeled toggles.
+
+Global Search (the star)
+
+Modes: Text, image, voice.
+
+UX: Autocomplete with category chips; show 3 instant “ghost results” from cache.
+
+API hooks: GET /api/search?q=...&source=cache then source=live fallback; if stale, enqueue refresh.
+
+Visual: Suggestion rows include retailer count badge and last-checked time.
+
+Product Card (reusable)
+
+Sections: Hero image, title, price block (best price + other retailer toggler), badges (verified, coupon), CTA row (Add to list / Alert / Compare).
+
+Behavior: Hover reveals actions (desktop), tap opens product detail (mobile).
+
+Progressive enhancement: low-res blur→full image lazy load, animated price update.
+
+Product Detail
+
+Top: large gallery, main price, retailer switcher
+
+Middle: price history (sparkline + interactive range), timeline of price events
+
+Bottom: image analysis (CLIP similarity, OCR results, barcodes) with micro badges for confidence.
+
+Actions: Price alert creation, smart list add, report retailer issue.
+
+Alerts & Smart Lists
+
+Alerts: show predicted “best buy date” (model suggestion) and current price delta.
+
+Smart Lists: AI-generated “suggested items” button (fills list using product embeddings and similarity).
+
+4 — Motion system & micro-interactions (recipes)
+
+Use Framer Motion; create a small motion scale:
+
+motion.quick — 120ms easeOut used for button taps
+
+motion.medium — 240ms spring for modals and card morph
+
+motion.slow — 400ms for overlays
+
+Micro-interaction recipes:
+
+Button press: scale 0.98 + tiny shadow increase (quick)
+
+Card entry: opacity 0 → 1 + translateY 12px (medium)
+
+Ghost-to-real morph: crossfade + shared layout animation between placeholder card and real card (medium)
+
+Price delta: translateY -6px + green pulse (quick)
+
+Respect prefers-reduced-motion.
+
+5 — UX for trust & data clarity (no fake counts)
+
+Always show data provenance: small “last checked” timestamp & source domain under prices.
+
+Retailer reliability score (0–100) with tooltip showing sample factors (uptime, historical price accuracy).
+
+When data is cached/stale, show a subtle orange badge “Stale — updating in background”.
+
+Don’t use locker words like “GPT” — use “AI-assisted comparison” and explain models & privacy in About.
+
+6 — Delightful onboarding & empty states
+
+New user: brief 3-step overlay that demonstrates Image search → Instant match → Set price alert (animated).
+
+Empty search: show three popular example queries & a big “Try camera” CTA.
+
+Empty alerts/lists: show “seed products” from your local scrapes — not dummy counts; seed data should be real or labeled sample.
+
+7 — Gamification & retention hooks
+
+“Saved Deals” streak: display a streak for active users who saved X alerts that triggered.
+
+Badges: “Early Adopter”, “Local Shopper” if user enables location.
+
+Micro-notifications: show small in-app ephemeral notifications for price drops with direct CTA to buy.
+
+8 — Performance & instrumentation (so it feels fast)
+
+Perceived speed tactics:
+
+Ghost results morphing
+
+Skeletons & progressive image loading
+
+Cache-first TanStack Query usage
+
+Budgets:
+
+Time-to-first-interactive (TTFI) < 1s (desktop)
+
+Largest Contentful Paint (LCP) < 1.5s for first screen (with small images)
+
+Bundle size < 300KB gzipped
+
+Instrumentation:
+
+RUM: sample 1–2% RUM events to backend
+
+Track: search latency (cache & live), CLIP-match time, camera capture time, SSE completion time
+
+9 — Accessibility & inclusion (must-have)
+
+Keyboard-first navigation for header, cards, modals.
+
+Readable contrast in both themes.
+
+Screen-reader friendly search suggestions and job progress announcements (aria-live).
+
+Provide an alternative to camera: easy file upload.
+
+10 — Developer handoff & design system artifacts (must deliver)
+
+Deliverables to hand to engineers / Copilot:
+
+design-tokens.json (colors, radii, spacing, shadows, font scale)
+
+Figma kit: components (Header, SearchBar, ProductCard, Modal, Toasts, Charts)
+
+Motion spec doc: durations & easing
+
+Component API docs (props + events) — short MD files
+
+Acceptance criteria for each component (visual + behavior + perf metric)
+
+
+
+
+✅ What This Will Achieve
+Feature	Paid APIs (Keepa/Diffbot)	Our Free Stack
+Product Prices	☑️ Yes	✅ Yes
+Electronics/Groceries	Limited	✅ Full India Retail
+Barcode / QR	Paid addon	✅ YOLOv8 + ZBar
+Product Image Recognition	Limited	✅ CLIP Vision
+Real-Time Ticket Prices	❌	✅ Yes
+Stock + Crypto Prices	❌	✅ Yes
+Latest News per Product	❌	✅ Yes
+Custom Retailers (local stores)	❌	✅ Yes
+Model Explainability	❌	✅ Yes (we own it)
+
+Our version = More Data + More Control
+Cost = ₹0 ✅
+
+
+Let's have an heavy buil💪💪

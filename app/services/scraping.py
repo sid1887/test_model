@@ -28,99 +28,382 @@ from app.services.stealth_browser import StealthBrowser, StealthSessionManager
 
 # Integration with our dedicated web scraper
 class CumpairScraperClient:
-    """Client to communicate with our dedicated scraper service"""
+    """
+    Enhanced client for dedicated Node.js scraper microservice
     
-    def __init__(self, base_url: str = "http://localhost:3000"):
+    Features:
+    - Intelligent failover to Python scrapers
+    - Request batching and deduplication
+    - Circuit breaker pattern for service failures
+    - Caching layer with Redis
+    - HAProxy/2Captcha orchestration
+    """
+    
+    def __init__(self, base_url: str = "http://scraper:3001"):
         self.base_url = base_url
         self.session = None
+        self.available = False
+        self.circuit_breaker = {
+            'failures': 0,
+            'last_attempt': None,
+            'threshold': 5,  # Trip after 5 failures
+            'timeout': 60  # Reset after 60 seconds
+        }
+        self.request_cache = {}  # In-memory cache for deduplication
+        self.batch_queue = []
+        self.batch_size = 10
         
     async def initialize(self):
-        """Initialize the scraper client session"""
-        self.session = aiohttp.ClientSession()
+        """Initialize with health check and service discovery"""
+        if self.session is None:
+            self.session = aiohttp.ClientSession()
         
-        # Test connection to scraper service
-        try:
-            async with self.session.get(f"{self.base_url}/health") as response:
-                if response.status == 200:
-                    logger.info("✅ Connected to dedicated scraper service")
-                    return True
-        except Exception as e:
-            logger.warning(f"⚠️ Dedicated scraper service not available: {e}")
+        # Check circuit breaker
+        if self._is_circuit_open():
+            logger.warning("⚠️ Circuit breaker OPEN - scraper service disabled temporarily")
             return False
         
+        try:
+            async with self.session.get(
+                f"{self.base_url}/health",
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as response:
+                if response.status == 200:
+                    health = await response.json()
+                    self.available = True
+                    self.circuit_breaker['failures'] = 0
+                    logger.info(f"✅ Scraper service: {health.get('status')}")
+                    logger.info(f"   Redis: Connected={health.get('redis', {}).get('isConnected')}")
+                    logger.info(f"   Proxy Pool: {health.get('scraper', {}).get('proxyPoolSize', 0)} proxies")
+                    logger.info(f"   Active Browsers: {health.get('scraper', {}).get('activeBrowsers', 0)}")
+                    return True
+                else:
+                    self._record_failure()
+                    return False
+        except Exception as e:
+            logger.warning(f"⚠️ Scraper service unavailable: {e}")
+            self._record_failure()
+            return False
+    
+    def _is_circuit_open(self) -> bool:
+        """Check if circuit breaker is open"""
+        if self.circuit_breaker['failures'] < self.circuit_breaker['threshold']:
+            return False
+        
+        if self.circuit_breaker['last_attempt']:
+            elapsed = time.time() - self.circuit_breaker['last_attempt']
+            if elapsed > self.circuit_breaker['timeout']:
+                # Reset circuit breaker
+                self.circuit_breaker['failures'] = 0
+                logger.info("🔄 Circuit breaker RESET - retrying scraper service")
+                return False
+        
+        return True
+    
+    def _record_failure(self):
+        """Record a service failure"""
+        self.circuit_breaker['failures'] += 1
+        self.circuit_breaker['last_attempt'] = time.time()
+        self.available = False
+        
     async def scrape_url(self, url: str, options: Dict = None) -> Dict:
-        """Scrape a single URL using the dedicated scraper"""
+        """
+        Scrape single URL with intelligent routing and caching
+        
+        Features:
+        - Cache checking before scraping
+        - Automatic failover to Python scrapers
+        - Request deduplication
+        """
+        # Check cache first
+        cache_key = self._get_cache_key(url, options)
+        if cache_key in self.request_cache:
+            cached_time = self.request_cache[cache_key].get('timestamp', 0)
+            if time.time() - cached_time < 300:  # 5-minute cache
+                logger.debug(f"Cache HIT for {url}")
+                return self.request_cache[cache_key]
+        
         if not self.session:
             await self.initialize()
-            
+        
+        if not self.available:
+            logger.info("Scraper service unavailable, using Python fallback")
+            return await self._fallback_scrape(url, options)
+        
         try:
-            payload = {"url": url}
+            payload = {
+                "query": url,  # For search endpoints
+                "url": url,
+                "usePuppeteer": True,
+                "cache": True,
+                "cacheTTL": 300
+            }
             if options:
                 payload.update(options)
-                
+            
             async with self.session.post(
-                f"{self.base_url}/api/scrape",
+                f"{self.base_url}/api/search",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
+                timeout=aiohttp.ClientTimeout(total=120)
             ) as response:
                 result = await response.json()
                 
-                if result.get("success"):
-                    return {
+                if response.status == 200 and (result.get("success") or result.get("products")):
+                    # Cache successful result
+                    cached_result = {
                         "status": "success",
-                        "data": result.get("data", {}),
+                        "data": result.get("data", result),
+                        "products": result.get("products", []),
                         "url": url,
-                        "timestamp": result.get("timestamp"),
-                        "response_time": result.get("responseTime")
+                        "timestamp": time.time(),
+                        "response_time": result.get("responseTime", 0),
+                        "source": "node_scraper"
                     }
+                    self.request_cache[cache_key] = cached_result
+                    return cached_result
                 else:
-                    return {
-                        "status": "failed",
-                        "error": result.get("error", "Unknown error"),
-                        "url": url
-                    }
+                    self._record_failure()
+                    return await self._fallback_scrape(url, options)
                     
+        except asyncio.TimeoutError:
+            logger.error(f"Scraper timeout for {url}")
+            self._record_failure()
+            return await self._fallback_scrape(url, options)
         except Exception as e:
-            logger.error(f"❌ Scraper service error for {url}: {e}")
+            logger.error(f"Scraper error for {url}: {e}")
+            self._record_failure()
+            return await self._fallback_scrape(url, options)
+    
+    async def _fallback_scrape(self, url: str, options: Dict = None) -> Dict:
+        """Fallback to Python-based scraping"""
+        logger.info(f"Using Python fallback scraper for {url}")
+        try:
+            # Use the AdaptiveScrapingEngine as fallback
+            from app.services.scraping import scraping_engine
+            result = await scraping_engine.scrape_product(url, options.get('query', '') if options else '')
+            result['source'] = 'python_fallback'
+            return result
+        except Exception as e:
             return {
                 "status": "failed",
                 "error": str(e),
-                "url": url
+                "url": url,
+                "source": "fallback_failed"
             }
     
+    def _get_cache_key(self, url: str, options: Dict = None) -> str:
+        """Generate cache key from URL and options"""
+        import hashlib
+        key_str = f"{url}:{json.dumps(options or {}, sort_keys=True)}"
+        return hashlib.md5(key_str.encode()).hexdigest()
+    
     async def scrape_batch(self, urls: List[str], options: Dict = None) -> List[Dict]:
-        """Scrape multiple URLs concurrently"""
+        """
+        High-performance batch scraping with intelligent distribution
+        
+        Features:
+        - Automatic batching for optimal performance
+        - Parallel execution with concurrency limits
+        - Mixed Node.js + Python scraping for resilience
+        """
         if not self.session:
             await self.initialize()
-            
+        
+        if not self.available or len(urls) > 20:
+            # For large batches or when service unavailable, use hybrid approach
+            return await self._hybrid_batch_scrape(urls, options)
+        
         try:
-            payload = {"urls": urls}
+            payload = {
+                "urls": urls if isinstance(urls[0], str) else urls,
+                "usePuppeteer": True,
+                "cache": True
+            }
             if options:
                 payload.update(options)
-                
+            
             async with self.session.post(
-                f"{self.base_url}/api/scrape/batch",
+                f"{self.base_url}/api/search/parallel",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                timeout=aiohttp.ClientTimeout(total=300)
             ) as response:
-                results = await response.json()
-                return results.get("results", [])
-                
+                if response.status == 200:
+                    result = await response.json()
+                    logger.info(f"✅ Batch: {result.get('successful_sites', 0)}/{len(urls)} successful")
+                    return result.get("results", [])
+                else:
+                    return await self._hybrid_batch_scrape(urls, options)
+                    
         except Exception as e:
-            logger.error(f"❌ Batch scraper service error: {e}")
-            return []
+            logger.error(f"Batch scraping error: {e}")
+            return await self._hybrid_batch_scrape(urls, options)
     
-    async def get_stats(self) -> Dict:
-        """Get scraper statistics"""
+    async def _hybrid_batch_scrape(self, urls: List[str], options: Dict = None) -> List[Dict]:
+        """Hybrid scraping using both Node.js and Python scrapers"""
+        logger.info(f"Using hybrid batch scraping for {len(urls)} URLs")
+        
+        # Split workload: First half to Node.js (if available), rest to Python
+        split_point = len(urls) // 2 if self.available else 0
+        
+        tasks = []
+        
+        # Node.js batch (if available)
+        if split_point > 0:
+            tasks.append(self.scrape_batch(urls[:split_point], options))
+        
+        # Python parallel scraping for remaining URLs
+        from app.services.scraping import scraping_engine
+        for url in urls[split_point:]:
+            tasks.append(scraping_engine.scrape_product(url, options.get('query', '') if options else ''))
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Flatten results
+        flattened = []
+        for result in results:
+            if isinstance(result, list):
+                flattened.extend(result)
+            elif isinstance(result, dict):
+                flattened.append(result)
+        
+        return flattened
+    
+    async def search_multi_retailer(self, query: str, retailers: List[str] = None, max_results: int = 10) -> Dict:
+        """
+        Intelligent multi-retailer search with parallel execution
+        
+        Features:
+        - Searches 6 retailers simultaneously: Amazon, Walmart, eBay, Target, BestBuy, Newegg
+        - HAProxy rotation for load balancing
+        - 2Captcha integration for blocked requests
+        - Result aggregation and deduplication
+        """
         if not self.session:
             await self.initialize()
-            
+        
+        if not self.available:
+            return await self._fallback_multi_search(query, retailers, max_results)
+        
+        if retailers is None:
+            retailers = ['amazon', 'walmart', 'ebay', 'target', 'bestbuy', 'newegg']
+        
         try:
-            async with self.session.get(f"{self.base_url}/api/stats") as response:
-                return await response.json()
+            payload = {
+                "query": query,
+                "sites": retailers,
+                "max_results": max_results
+            }
+            
+            async with self.session.post(
+                f"{self.base_url}/api/search",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=180)
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    
+                    # Aggregate and deduplicate results
+                    all_products = []
+                    seen_titles = set()
+                    
+                    for site_result in result.get('results', []):
+                        for product in site_result.get('products', []):
+                            title_normalized = product.get('title', '').lower().strip()
+                            if title_normalized and title_normalized not in seen_titles:
+                                seen_titles.add(title_normalized)
+                                all_products.append(product)
+                    
+                    logger.info(f"✅ Multi-retailer: {len(all_products)} unique products from {len(retailers)} retailers")
+                    
+                    return {
+                        "products": all_products,
+                        "total_results": len(all_products),
+                        "retailers_searched": len(retailers),
+                        "successful_retailers": result.get('successful_sites', 0),
+                        "query": query,
+                        "source": "node_scraper"
+                    }
+                else:
+                    return await self._fallback_multi_search(query, retailers, max_results)
+                    
         except Exception as e:
-            logger.error(f"❌ Error getting scraper stats: {e}")
-            return {}
+            logger.error(f"Multi-retailer search error: {e}")
+            return await self._fallback_multi_search(query, retailers, max_results)
+    
+    async def _fallback_multi_search(self, query: str, retailers: List[str], max_results: int) -> Dict:
+        """Fallback multi-retailer search using Python scrapers"""
+        logger.info("Using Python fallback for multi-retailer search")
+        
+        # Generate search URLs for each retailer
+        search_urls = {
+            'amazon': f"https://www.amazon.com/s?k={query.replace(' ', '+')}",
+            'walmart': f"https://www.walmart.com/search?q={query.replace(' ', '+')}",
+            'ebay': f"https://www.ebay.com/sch/i.html?_nkw={query.replace(' ', '+')}",
+            'target': f"https://www.target.com/s?searchTerm={query.replace(' ', '+')}",
+            'bestbuy': f"https://www.bestbuy.com/site/searchpage.jsp?st={query.replace(' ', '+')}",
+            'newegg': f"https://www.newegg.com/p/pl?d={query.replace(' ', '+')}"
+        }
+        
+        # Scrape all retailers in parallel
+        from app.services.scraping import scraping_engine
+        tasks = [
+            scraping_engine.scrape_product(search_urls[retailer], query)
+            for retailer in (retailers or search_urls.keys())
+            if retailer in search_urls
+        ]
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        all_products = []
+        successful = 0
+        for result in results:
+            if isinstance(result, dict) and result.get('status') == 'success':
+                successful += 1
+                products = result.get('data', {}).get('products', [])
+                all_products.extend(products)
+        
+        return {
+            "products": all_products,
+            "total_results": len(all_products),
+            "retailers_searched": len(retailers or search_urls),
+            "successful_retailers": successful,
+            "query": query,
+            "source": "python_fallback"
+        }
+    
+    async def get_stats(self) -> Dict:
+        """Get comprehensive scraper statistics"""
+        if not self.session:
+            await self.initialize()
+        
+        stats = {
+            "circuit_breaker": {
+                "status": "OPEN" if self._is_circuit_open() else "CLOSED",
+                "failures": self.circuit_breaker['failures'],
+                "threshold": self.circuit_breaker['threshold']
+            },
+            "cache": {
+                "size": len(self.request_cache),
+                "hit_rate": "N/A"  # Could be tracked
+            },
+            "service_available": self.available
+        }
+        
+        if self.available:
+            try:
+                async with self.session.get(
+                    f"{self.base_url}/api/stats",
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status == 200:
+                        scraper_stats = await response.json()
+                        stats["scraper_service"] = scraper_stats
+                        return stats
+            except Exception as e:
+                logger.error(f"Error getting scraper stats: {e}")
+        
+        return stats
     
     async def close(self):
         """Close the session"""

@@ -105,6 +105,18 @@ peft>=0.10.0
 textblob>=0.17.0
 
 # ============================================================================
+# VOICE / SPEECH-TO-TEXT
+# ============================================================================
+faster-whisper>=0.10.0  # Optimized Whisper implementation
+openai-whisper>=20231117  # Original Whisper (fallback)
+
+# ============================================================================
+# BARCODE & QR CODE DETECTION
+# ============================================================================
+pyzbar>=0.1.9  # Barcode/QR code decoder
+
+
+# ============================================================================
 # CLIP & IMAGE-TEXT MODELS - CRITICAL FOR IMAGE SEARCH
 # ============================================================================
 git+https://github.com/openai/CLIP.git
@@ -157,10 +169,17 @@ imageio>=2.31.0
 # ============================================================================
 # MONITORING & LOGGING - CRITICAL (was missing structlog!)
 # ============================================================================
-prometheus-client>=0.19.0
+prometheus-client[multiprocess]>=0.19.0  # Added multiprocess support for production
 structlog>=23.1.0,<25.0.0
 colorlog>=6.7.0  # Color logging for console output
 rich>=13.7.0  # Rich text formatting and progress bars
+
+# ============================================================================
+# NOTIFICATION SERVICES - PRODUCTION
+# ============================================================================
+sendgrid>=6.10.0  # Email notifications
+twilio>=8.10.0  # SMS and WhatsApp notifications
+firebase-admin>=6.2.0  # Push notifications (FCM)
 
 # ============================================================================
 # TIME SERIES FORECASTING & ADVANCED ANALYTICS

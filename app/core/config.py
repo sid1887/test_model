@@ -20,10 +20,17 @@ class Settings(BaseSettings):
 
     # Redis Configuration
     redis_url: str = "redis://localhost:6379"
-    # Celery Configuration
-    celery_broker_url: str = "redis://localhost:6379/0"
-    celery_result_backend: str = "redis://localhost:6379/0"
-
+    
+    @property
+    def celery_broker_url(self) -> str:
+        """Celery broker URL derived from redis_url"""
+        return f"{self.redis_url}/0"
+    
+    @property
+    def celery_result_backend(self) -> str:
+        """Celery result backend URL derived from redis_url"""
+        return f"{self.redis_url}/0"
+    
     # Proxy Configuration
     rota_url: str = "http://localhost:8001"
     # File Upload Configuration
