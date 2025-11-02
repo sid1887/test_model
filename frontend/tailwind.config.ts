@@ -1,5 +1,6 @@
 
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
 	darkMode: ["class"],
@@ -62,7 +63,33 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Aether Design System - Cosmic Color Pantheon
+				aether: {
+					primary: 'hsl(var(--aether-primary))',
+					glow: 'hsl(var(--aether-glow))',
+					accent: 'hsl(var(--aether-accent))',
+					foreground: 'hsl(var(--aether-foreground))',
+					mist: 'hsl(var(--mist-bg))'
 				}
+			},
+			// Aether Gradient System
+			backgroundImage: {
+				'gradient-aether-hero': 'linear-gradient(135deg, hsl(270 80% 45%), hsl(250 85% 60%), hsl(200 90% 55%))',
+				'gradient-glass-veil': 'linear-gradient(180deg, hsl(0 0% 100% / 0.15), hsl(0 0% 100% / 0.05))',
+				'gradient-border-orb': 'conic-gradient(from 0deg, hsl(270 80% 45%), hsl(15 90% 60%), hsl(270 80% 45%))',
+				'gradient-cosmic': 'linear-gradient(135deg, hsl(270 80% 45% / 0.9), hsl(250 85% 60% / 0.8), hsl(200 90% 55% / 0.7))',
+				'gradient-shimmer': 'linear-gradient(90deg, transparent, hsl(250 85% 60% / 0.2), transparent)',
+			},
+			// Aether Shadow System with Soul
+			boxShadow: {
+				'aether': '0 20px 60px hsl(270 80% 45% / 0.3)',
+				'aether-lg': '0 30px 80px hsl(270 80% 45% / 0.4)',
+				'float': '0 8px 32px hsl(250 85% 60% / 0.15)',
+				'float-lg': '0 12px 48px hsl(250 85% 60% / 0.2)',
+				'glow': '0 0 20px hsl(250 85% 60% / 0.5)',
+				'glow-accent': '0 0 30px hsl(15 90% 60% / 0.6)',
+				'inner-glow': 'inset 0 0 20px hsl(250 85% 60% / 0.3)',
 			},
 			// Professional 4-point spacing scale
 			spacing: {
@@ -131,6 +158,27 @@ export default {
 				'pulse-glow': {
 					'0%, 100%': { boxShadow: '0 0 5px rgba(59, 130, 246, 0.5)' },
 					'50%': { boxShadow: '0 0 20px rgba(59, 130, 246, 0.8)' }
+				},
+				// Aether Motion System
+				'aether-shimmer': {
+					'0%': { backgroundPosition: '-200% 0' },
+					'100%': { backgroundPosition: '200% 0' }
+				},
+				'float': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-10px)' }
+				},
+				'rotate-slow': {
+					'0%': { transform: 'rotate(0deg)' },
+					'100%': { transform: 'rotate(360deg)' }
+				},
+				'pulse-scale': {
+					'0%, 100%': { transform: 'scale(1)', opacity: '1' },
+					'50%': { transform: 'scale(1.05)', opacity: '0.8' }
+				},
+				'gradient-shift': {
+					'0%, 100%': { backgroundPosition: '0% 50%' },
+					'50%': { backgroundPosition: '100% 50%' }
 				}
 			},
 			animation: {
@@ -138,7 +186,13 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'ripple': 'ripple 0.6s linear',
 				'shimmer': 'shimmer 2s infinite',
-				'pulse-glow': 'pulse-glow 2s ease-in-out infinite'
+				'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+				// Aether Animations
+				'aether-shimmer': 'aether-shimmer 3s linear infinite',
+				'float': 'float 3s ease-in-out infinite',
+				'rotate-slow': 'rotate-slow 60s linear infinite',
+				'pulse-scale': 'pulse-scale 2s ease-in-out infinite',
+				'gradient-shift': 'gradient-shift 5s ease infinite'
 			},
 			// Improved responsive breakpoints
 			screens: {
@@ -151,5 +205,5 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [tailwindcssAnimate],
 } satisfies Config;

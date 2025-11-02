@@ -266,12 +266,12 @@ class ScraperAPI {
             });
 
             logger.info(`Scrape result for ${site} - success: ${result.success}, status: ${result.status}`);
-            
+
             if (result.success) {
               logger.info(`Scrape successful for ${site}, extracting products...`);
               logger.info(`Result data keys: ${Object.keys(result.data).join(', ')}`);
               logger.info(`Has HTML: ${!!result.data.html}, HTML length: ${result.data.html ? result.data.html.length : 0}`);
-              
+
               const products = this.extractProductsFromData(result.data, site);
               return {
                 site,
@@ -344,7 +344,7 @@ class ScraperAPI {
 
         // All available retailers
         const allSites = ['amazon', 'walmart', 'ebay', 'target', 'bestbuy', 'newegg'];
-        
+
         const siteUrlGenerators = {
           amazon: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`,
           walmart: (q) => `https://www.walmart.com/search?q=${encodeURIComponent(q)}`,
@@ -588,24 +588,24 @@ class ScraperAPI {
           if (i >= 10) return false; // Limit to 10 products per site
 
           const $item = $(element);
-          
+
           // Try to find title - first look in children, then in element itself
           let title = $item.find(selectors.title).first().text().trim();
           if (!title) {
             title = $item.filter(selectors.title).text().trim();
           }
-          
+
           // Try to find price - first look in children, then in element itself
           let priceText = $item.find(selectors.price).first().text().trim();
           if (!priceText) {
             priceText = $item.filter(selectors.price).text().trim();
           }
-          
+
           // Get image URL - try src, data-src, srcset
           const imageUrl = $item.find(selectors.image).first().attr('src') ||
                         $item.find(selectors.image).first().attr('data-src') ||
                         $item.find(selectors.image).first().attr('data-lazy-src') || '';
-          
+
           // Get link - first look in children, then in element itself
           let link = $item.find(selectors.link).first().attr('href');
           if (!link) {

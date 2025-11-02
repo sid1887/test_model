@@ -13,14 +13,23 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ 
-        type: "spring",
-        stiffness: 260,
-        damping: 20,
+        type: "tween",
+        ease: [0.25, 0.1, 0.25, 1], // Aether custom cubic-bezier easing
         duration: 0.6
       }}
       className="min-h-screen"
     >
-      {children}
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{
+          delay: 0.1,
+          duration: 0.5,
+          ease: [0.25, 0.1, 0.25, 1],
+        }}
+      >
+        {children}
+      </motion.div>
     </motion.div>
   );
 };

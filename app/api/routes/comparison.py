@@ -796,6 +796,231 @@ async def update_retailer_status(
         raise HTTPException(status_code=500, detail=f"Failed to update retailer status: {str(e)}")
 
 
+# ============================================================================
+# MULTI-MODAL PRODUCT SEARCH (Image/Barcode/Voice → AI → Scraper → Prices)
+# ============================================================================
+
+from fastapi import UploadFile, File, BackgroundTasks
+from app.core.events import emit_image_uploaded, emit_barcode_detected, emit_scrape_requested
+import uuid
+import os
+import shutil
+
+@router.post("/search-by-image")
+async def search_products_by_image(
+    file: UploadFile = File(...),
+    sites: Optional[List[str]] = Query(default=["amazon", "walmart", "ebay"]),
+    max_results: int = Query(default=10, ge=1, le=50),
+    background_tasks: BackgroundTasks = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    🔥 FLAGSHIP FEATURE: Image → AI Detection → Live Scraper Search
+    
+    Flow:
+    1. Upload image → Detect product (CLIP/YOLO/OCR/Barcode)
+    2. Extract product name/code → Search via scraper
+    3. Return live prices from retailers
+    
+    This is the "Snap to Match" feature from the vision doc!
+    """
+    try:
+        # Validate file
+        if not file.content_type or not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Generate unique ID
+        image_id = str(uuid.uuid4())
+        request_id = f"img-search-{image_id[:8]}"
+        
+        # Save uploaded file
+        upload_dir = "uploads/product_images"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_extension = os.path.splitext(file.filename)[1] or ".jpg"
+        temp_file_path = os.path.join(upload_dir, f"{image_id}{file_extension}")
+        
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Emit event for async processing
+        await emit_image_uploaded(image_id, temp_file_path, request_id)
+        
+        # Step 1: Try barcode detection first (fastest)
+        barcode_result = None
+        try:
+            from app.services.image_processor import get_image_processor
+            processor = await get_image_processor()
+            barcodes = await processor._detect_barcodes(temp_file_path)
+            
+            if barcodes and len(barcodes) > 0:
+                barcode_result = barcodes[0]
+                await emit_barcode_detected(
+                    barcode_result['data'],
+                    barcode_result['type'],
+                    image_id,
+                    request_id
+                )
+        except Exception as e:
+            print(f"Barcode detection failed: {e}")
+        
+        # Step 2: Try CLIP image matching (product identification)
+        clip_match = None
+        search_query = None
+        
+        try:
+            from app.services.clip_search import clip_service
+            
+            if clip_service.clip_model is None:
+                await clip_service.initialize()
+            
+            # Search for similar products in our DB
+            clip_matches = await clip_service.search_by_image(temp_file_path, top_k=1)
+            
+            if clip_matches and len(clip_matches) > 0:
+                clip_match = clip_matches[0]
+                
+                # Get product details
+                stmt = select(Product).where(Product.id == clip_match['product_id'])
+                result = await db.execute(stmt)
+                product = result.scalar_one_or_none()
+                
+                if product:
+                    search_query = f"{product.brand} {product.name}" if product.brand else product.name
+                    
+        except Exception as e:
+            print(f"CLIP matching failed: {e}")
+        
+        # Step 3: Fallback to OCR text extraction
+        if not search_query and not barcode_result:
+            try:
+                from app.services.image_processor import get_image_processor
+                processor = await get_image_processor()
+                ocr_result = await processor._extract_text(temp_file_path)
+                
+                if ocr_result and len(ocr_result) > 5:
+                    # Extract product-like text (heuristic: look for brand names, model numbers)
+                    search_query = ocr_result[:100]  # First 100 chars as fallback
+                    
+            except Exception as e:
+                print(f"OCR extraction failed: {e}")
+        
+        # Step 4: If we have a barcode, search by barcode value
+        if barcode_result:
+            search_query = barcode_result['data']
+        
+        if not search_query:
+            return {
+                "status": "no_match",
+                "message": "Could not identify product from image. Try a clearer image or use text search.",
+                "image_id": image_id,
+                "analysis": {
+                    "barcode_detected": bool(barcode_result),
+                    "clip_match": bool(clip_match),
+                    "ocr_attempted": True
+                }
+            }
+        
+        # Step 5: Search via scraper
+        await emit_scrape_requested(search_query, sites, max_results, request_id)
+        
+        try:
+            scraper_url = "http://scraper:3001/api/search"
+            
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    scraper_url,
+                    json={
+                        "query": search_query,
+                        "sites": sites,
+                        "max_results": max_results
+                    }
+                )
+                
+                if response.status_code == 200:
+                    scraper_data = response.json()
+                    
+                    return {
+                        "status": "success",
+                        "request_id": request_id,
+                        "image_id": image_id,
+                        "detected_query": search_query,
+                        "detection_method": "barcode" if barcode_result else ("clip_match" if clip_match else "ocr"),
+                        "detection_confidence": clip_match.get('similarity', 1.0) if clip_match else 0.8,
+                        "results": scraper_data.get('results', []),
+                        "metadata": {
+                            **scraper_data.get('metadata', {}),
+                            "barcode": barcode_result,
+                            "clip_match": {
+                                "product_id": clip_match['product_id'],
+                                "similarity": clip_match['similarity']
+                            } if clip_match else None
+                        }
+                    }
+                else:
+                    raise HTTPException(status_code=502, detail="Scraper service unavailable")
+                    
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Failed to connect to scraper: {str(e)}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Image search failed: {str(e)}")
+
+
+@router.post("/search-by-barcode")
+async def search_products_by_barcode(
+    barcode: str = Query(..., description="Barcode value to search"),
+    barcode_type: Optional[str] = Query(default="EAN13", description="Barcode type"),
+    sites: Optional[List[str]] = Query(default=["amazon", "walmart", "ebay"]),
+    max_results: int = Query(default=10, ge=1, le=50)
+):
+    """
+    🔥 Search products by barcode/QR code directly
+    
+    Useful when barcode is already detected/scanned
+    """
+    try:
+        request_id = f"barcode-search-{barcode[:8]}"
+        
+        # Emit event
+        await emit_barcode_detected(barcode, barcode_type, "direct", request_id)
+        await emit_scrape_requested(barcode, sites, max_results, request_id)
+        
+        # Search via scraper
+        scraper_url = "http://scraper:3001/api/search"
+        
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(
+                scraper_url,
+                json={
+                    "query": barcode,
+                    "sites": sites,
+                    "max_results": max_results
+                }
+            )
+            
+            if response.status_code == 200:
+                scraper_data = response.json()
+                
+                return {
+                    "status": "success",
+                    "request_id": request_id,
+                    "barcode": barcode,
+                    "barcode_type": barcode_type,
+                    "results": scraper_data.get('results', []),
+                    "metadata": scraper_data.get('metadata', {})
+                }
+            else:
+                raise HTTPException(status_code=502, detail="Scraper service unavailable")
+                
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Failed to connect to scraper: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Barcode search failed: {str(e)}")
+
+
 # ============================================
 # IMAGE-BASED PRODUCT SEARCH WITH SCRAPER
 # ============================================

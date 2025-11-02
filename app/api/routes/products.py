@@ -1,4 +1,4 @@
-﻿"""
+"""
 Product management API routes
 Handles CRUD operations for products
 """

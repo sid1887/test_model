@@ -56,5 +56,5 @@ HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=5 \
         curl -f http://localhost:9001/ || \
         exit 1
 
-# Start with error handling and fallback options
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port 9001 || python -m uvicorn main:app --host 0.0.0.0 --port 9001 || gunicorn --bind 0.0.0.0:9001 --workers 2 --timeout 120 app:app"]
+# Start Flask app
+CMD ["python", "app.py"]

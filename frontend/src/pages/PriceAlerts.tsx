@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Bell, TrendingDown, AlertCircle, CheckCircle, Pause } from 'lucide-react';
+import { Plus, Bell, TrendingDown, AlertCircle, CheckCircle, Pause, Wifi, WifiOff } from 'lucide-react';
 import { AlertCreateModal } from '../components/alerts/AlertCreateModal';
 import { AlertCard } from '../components/alerts/AlertCard';
 import { AlertDetailModal } from '../components/alerts/AlertDetailModal';
 import { AlertSettingsModal } from '../components/alerts/AlertSettingsModal';
 import { useAlerts } from '../hooks/useAlerts';
-import { useWebSocket } from '../hooks/useWebSocket';
-import { Alert } from '../types/alerts';
+import { useAlertsWebSocket } from '@/hooks/api';
+import { Alert, AlertCreateRequest } from '../types/alerts';
 
 export const PriceAlertsPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -19,6 +19,7 @@ export const PriceAlertsPage: React.FC = () => {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   
+  // Keep existing hooks for now (gradual migration)
   const {
     alerts,
     loading,
@@ -33,17 +34,18 @@ export const PriceAlertsPage: React.FC = () => {
     refreshAlerts
   } = useAlerts(filterStatus);
   
-  // WebSocket for real-time updates
-  const { lastMessage } = useWebSocket('/ws/alerts');
+  // Add REAL-TIME WebSocket for live updates - auto-reconnect, toast notifications built-in!
+  const { messages, isConnected } = useAlertsWebSocket();
   
+  // React to WebSocket messages
   useEffect(() => {
-    if (lastMessage) {
-      // Refresh alerts when WebSocket message received
+    if (messages.length > 0) {
+      // Refresh alerts list when new messages arrive
       refreshAlerts();
     }
-  }, [lastMessage, refreshAlerts]);
+  }, [messages, refreshAlerts]);
   
-  const handleCreateAlert = async (alertData: Record<string, unknown>) => {
+  const handleCreateAlert = async (alertData: AlertCreateRequest) => {
     try {
       await createAlert(alertData);
       setIsCreateModalOpen(false);
@@ -78,9 +80,22 @@ export const PriceAlertsPage: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                 <Bell className="h-8 w-8 text-blue-600" />
                 Price Alerts
+                {/* Real-time WebSocket Connection Status */}
+                {isConnected ? (
+                  <span className="flex items-center gap-1 text-sm font-normal text-green-600 bg-green-50 px-3 py-1 rounded-full">
+                    <Wifi className="h-4 w-4" />
+                    Live
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-sm font-normal text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+                    <WifiOff className="h-4 w-4" />
+                    Connecting...
+                  </span>
+                )}
               </h1>
               <p className="mt-2 text-gray-600">
                 Monitor product prices and get notified when they match your targets
+                {isConnected && <span className="text-green-600 font-medium"> • Real-time updates active</span>}
               </p>
             </div>
             
@@ -218,6 +233,10 @@ export const PriceAlertsPage: React.FC = () => {
       <AlertSettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+        onSave={() => {
+          setIsSettingsModalOpen(false);
+          refreshAlerts();
+        }}
       />
     </div>
   );

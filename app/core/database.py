@@ -3,22 +3,37 @@ Database configuration and initialization
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import MetaData
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
+from sqlalchemy import MetaData, create_engine
 import asyncpg
 from app.core.config import settings
 
-# Database engine
+# Async database engine
 engine = create_async_engine(
     settings.database_url.replace("postgresql://", "postgresql+asyncpg://"),
     echo=settings.debug
 )
 
-# Session factory
+# Sync database engine (for workers and background tasks)
+sync_engine = create_engine(
+    settings.database_url.replace("postgresql://", "postgresql://"),
+    echo=settings.debug
+)
+
+# Async session factory
 async_session_maker = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False
+)
+
+# Sync session factory (for workers)
+SessionLocal = sessionmaker(
+    bind=sync_engine,
+    class_=Session,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
 )
 
 class Base(DeclarativeBase):

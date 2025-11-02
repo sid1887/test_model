@@ -40,6 +40,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://compair:compair123@postgres:5432/compair
       - REDIS_URL=redis://redis:6379
+      - CAPTCHA_SERVICE_URL=http://captcha:9001
       - SERVICE_NAME=${SERVICE_NAME:-cumpair}
       - DEMO_MODE=${DEMO_MODE:-false}
       - APP_NAME=${APP_NAME:-Cumpair}
@@ -117,6 +118,29 @@ services:
       - ./scraper/logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Captcha solving service
+  captcha:
+    build:
+      context: ./captcha-service
+    ports:
+      - "9001:9001"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://redis:6379
+      - FLASK_ENV=production
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./captcha-service/temp:/app/temp
+      - ./captcha-service/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
       interval: 30s
       timeout: 10s
       retries: 3

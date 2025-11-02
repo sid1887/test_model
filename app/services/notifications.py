@@ -132,7 +132,7 @@ class NotificationService:
         try:
             # Import here to avoid circular imports
             from app.core.database import async_session_maker
-            from app.models.alerts import Notification
+            from app.models.alert import Notification
             from sqlalchemy import select
             
             async with async_session_maker() as session:

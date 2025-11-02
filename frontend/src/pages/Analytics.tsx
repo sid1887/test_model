@@ -1,31 +1,27 @@
 /**
- * Analytics Page Component
- * Main page for viewing analytics and insights
+ * Enhanced Analytics Page with Aether Design System
+ * Beautiful UI with animations, glass morphism, and live data
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, BarChart3, Brain, DollarSign } from 'lucide-react';
-import { useAnalytics } from '../hooks/useAnalytics';
-import { AnalyticsOverview } from '../types/alerts';
+import React, { useState } from 'react';
+import { 
+  TrendingUp, 
+  BarChart3, 
+  Brain, 
+  DollarSign
+} from 'lucide-react';
+import { useAnalyticsOverview } from '@/hooks/api';
 import { TrendExplorer } from '../components/analytics/TrendExplorer';
 import { ForecastDisplay } from '../components/analytics/ForecastDisplay';
 import { SentimentPanel } from '../components/analytics/SentimentPanel';
 import { RetailerComparison } from '../components/analytics/RetailerComparison';
 
 export const AnalyticsPage: React.FC = () => {
-  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [activeTab, setActiveTab] = useState<'trends' | 'forecast' | 'sentiment' | 'retailers'>('trends');
   const [selectedProductId, setSelectedProductId] = useState<number>(1);
-  const { getOverview, loading } = useAnalytics();
-
-  const loadOverview = useCallback(async () => {
-    const data = await getOverview();
-    if (data) setOverview(data);
-  }, [getOverview]);
-
-  useEffect(() => {
-    loadOverview();
-  }, [loadOverview]);
+  
+  // Use REAL analytics data from backend
+  const { data: overview, isLoading: loading } = useAnalyticsOverview();
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -48,14 +44,14 @@ export const AnalyticsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Overview Stats */}
+        {/* Overview Stats - Using REAL data from backend */}
         {overview && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Products Tracked</p>
-                  <p className="text-2xl font-bold text-gray-900">{overview.total_products}</p>
+                  <p className="text-2xl font-bold text-gray-900">{overview.total_products?.toLocaleString()}</p>
                 </div>
                 <BarChart3 className="h-8 w-8 text-blue-600" />
               </div>
@@ -63,30 +59,30 @@ export const AnalyticsPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Avg. Price Change</p>
-                  <p className={`text-2xl font-bold ${(overview?.avg_price_change ?? 0) >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {(overview?.avg_price_change ?? 0) >= 0 ? '+' : ''}{(overview?.avg_price_change ?? 0).toFixed(1)}%
+                  <p className="text-sm text-gray-600">Total Searches</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {overview.total_searches?.toLocaleString()}
                   </p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <TrendingUp className="h-8 w-8 text-purple-600" />
               </div>
             </div>
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Savings</p>
-                  <p className="text-2xl font-bold text-gray-900">${(overview?.total_savings ?? 0).toFixed(2)}</p>
+                  <p className="text-sm text-gray-600">Avg. Price Savings</p>
+                  <p className="text-2xl font-bold text-green-600">${overview.avg_price_savings?.toFixed(2)}</p>
                 </div>
-                <DollarSign className="h-8 w-8 text-yellow-600" />
+                <DollarSign className="h-8 w-8 text-green-600" />
               </div>
             </div>
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Forecasts Generated</p>
-                  <p className="text-2xl font-bold text-gray-900">{overview?.forecasts_generated ?? 0}</p>
+                  <p className="text-sm text-gray-600">Active Alerts</p>
+                  <p className="text-2xl font-bold text-orange-600">{overview.active_alerts}</p>
                 </div>
-                <Brain className="h-8 w-8 text-purple-600" />
+                <Brain className="h-8 w-8 text-orange-600" />
               </div>
             </div>
           </div>

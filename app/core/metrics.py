@@ -338,3 +338,95 @@ def set_active_connections(connection_type: str, count: int):
     manager.get_metric('active_connections').labels(
         connection_type=connection_type
     ).set(count)
+
+
+# Additional helper methods for backward compatibility
+def track_ai_inference(model: str, duration: float, status: str):
+    """Track AI inference request"""
+    manager = get_metrics_manager()
+    manager.get_metric('ai_requests_total').labels(
+        model_type=model,
+        status=status
+    ).inc()
+    if duration:
+        manager.get_metric('ai_processing_duration_seconds').labels(
+            model_type=model
+        ).observe(duration)
+
+
+def track_cache_hit(cache_type: str, key: str = None):
+    """Track cache hit"""
+    manager = get_metrics_manager()
+    manager.get_metric('cache_hits_total').labels(
+        cache_type=cache_type
+    ).inc()
+
+
+def track_cache_miss(cache_type: str, key: str = None):
+    """Track cache miss"""
+    manager = get_metrics_manager()
+    manager.get_metric('cache_misses_total').labels(
+        cache_type=cache_type
+    ).inc()
+
+
+def track_db_query(operation: str, table: str, duration: float):
+    """Track database query"""
+    manager = get_metrics_manager()
+    manager.get_metric('db_queries_total').labels(
+        operation=operation,
+        table=table
+    ).inc()
+    if duration:
+        manager.get_metric('db_query_duration_seconds').labels(
+            operation=operation,
+            table=table
+        ).observe(duration)
+
+
+# Create a wrapper class for backward compatibility
+class MetricsWrapper:
+    """Wrapper to provide attribute-style access to metrics"""
+    
+    def __init__(self):
+        self._manager = get_metrics_manager()
+    
+    def __getattr__(self, name):
+        """Allow direct attribute access to metrics"""
+        try:
+            return self._manager.get_metric(name)
+        except KeyError:
+            # Try to create commonly used metrics on-the-fly
+            if name == 'feed_updates_total':
+                return self._manager.create_counter(
+                    'feed_updates_total',
+                    'Total feed updates',
+                    ['feed_type', 'source']
+                )
+            elif name == 'user_searches':
+                return self._manager.create_counter(
+                    'user_searches',
+                    'Total user searches',
+                    ['search_type']
+                )
+            raise AttributeError(f"Metric '{name}' not found")
+    
+    def track_ai_inference(self, model: str, duration: float, status: str):
+        """Track AI inference"""
+        return track_ai_inference(model, duration, status)
+    
+    def track_cache_hit(self, cache_type: str, key: str = None):
+        """Track cache hit"""
+        return track_cache_hit(cache_type, key)
+    
+    def track_cache_miss(self, cache_type: str, key: str = None):
+        """Track cache miss"""
+        return track_cache_miss(cache_type, key)
+    
+    def track_db_query(self, operation: str, table: str, duration: float):
+        """Track database query"""
+        return track_db_query(operation, table, duration)
+
+
+# Export metrics as an alias for backward compatibility
+metrics = MetricsWrapper()

@@ -1,7 +1,7 @@
 
-import React, { useRef, useEffect } from 'react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import React, { useRef, useEffect } from "react";
+import { motion, useMotionValue, useSpring } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface MagneticButtonProps {
   children: React.ReactNode;
@@ -63,14 +63,32 @@ const MagneticButton: React.FC<MagneticButtonProps> = ({
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 p-4 text-white font-semibold shadow-xl transition-all duration-300 hover:shadow-2xl",
+        "relative overflow-hidden rounded-2xl bg-gradient-aether-hero p-4 text-white font-semibold shadow-aether transition-all duration-300 hover:shadow-float animate-gradient-shift",
         className
       )}
     >
       <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 transition-opacity duration-300 hover:opacity-100"
-        initial={false}
+        className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent"
+        initial={{ opacity: 0 }}
         whileHover={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      />
+      <motion.div
+        className="absolute inset-0"
+        animate={{
+          background: [
+            'radial-gradient(circle at 20% 50%, hsl(var(--aether-glow)) 0%, transparent 50%)',
+            'radial-gradient(circle at 80% 50%, hsl(var(--aether-primary)) 0%, transparent 50%)',
+            'radial-gradient(circle at 50% 80%, hsl(var(--aether-glow)) 0%, transparent 50%)',
+            'radial-gradient(circle at 20% 50%, hsl(var(--aether-glow)) 0%, transparent 50%)',
+          ],
+        }}
+        transition={{
+          duration: 5,
+          repeat: Infinity,
+          ease: 'linear',
+        }}
+        style={{ opacity: 0.3 }}
       />
       <span className="relative z-10">{children}</span>
     </motion.button>

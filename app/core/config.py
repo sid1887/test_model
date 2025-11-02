@@ -1,4 +1,4 @@
-﻿"""
+"""
 Core configuration settings for Compair application
 """
 
@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     efficientnet_model_path: str = "models/spec_extractor.h5"
     clip_model_name: str = "ViT-B/32"
     clip_cache_dir: str = "models/clip_cache"
+    
+    # HuggingFace Configuration
+    hf_api_key: str = ""  # HuggingFace API key (optional, uses public inference if empty)
+    
     # Scraper Service Configuration
     scraper_service_url: str = "http://localhost:3001"
     max_concurrent_requests: int = 100

@@ -61,21 +61,6 @@ const ValueScoredProductCard: React.FC<ValueScoredProductCardProps> = ({
   const [showAllSpecs, setShowAllSpecs] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const handleLikeClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onLike?.(id);
-  };
-
-  const handleAddToCartClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onAddToCart?.(id);
-  };
-
-  const handleCompareClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onCompare?.(id);
-  };
-
   if (isLoading) {
     return (
       <Card className={cn("overflow-hidden", className)}>
@@ -108,7 +93,7 @@ const ValueScoredProductCard: React.FC<ValueScoredProductCardProps> = ({
       aria-labelledby={`product-${id}-title`}
       aria-describedby={`product-${id}-description`}
     >
-      <Card className="overflow-hidden backdrop-blur-md bg-card border border-border shadow-lg transition-all duration-300 group-hover:shadow-xl group-focus:shadow-xl group-hover:border-primary/50 group-focus:border-primary/50">
+      <Card className="overflow-hidden glass-elevated border border-white/20 dark:border-white/10 shadow-aether transition-all duration-300 group-hover:shadow-float group-focus:shadow-float group-hover:border-aether-glow/50 group-focus:border-aether-glow/50">
         {/* Image Container */}
         <div className="relative overflow-hidden aspect-square">
           <motion.img
@@ -123,7 +108,7 @@ const ValueScoredProductCard: React.FC<ValueScoredProductCardProps> = ({
           
           {/* Gradient Overlay */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+            className="absolute inset-0 bg-gradient-to-t from-aether-foreground/60 via-transparent to-transparent"
             animate={{
               opacity: isHovered ? 1 : 0,
             }}
@@ -135,7 +120,7 @@ const ValueScoredProductCard: React.FC<ValueScoredProductCardProps> = ({
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute top-3 left-3 bg-destructive text-destructive-foreground px-2 py-1 rounded-md text-xs font-bold"
+              className="absolute top-3 left-3 bg-gradient-to-r from-aether-accent to-orange-500 text-white px-2 py-1 rounded-md text-xs font-bold shadow-glow-accent"
             >
               {discount}
             </motion.div>
@@ -218,7 +203,7 @@ const ValueScoredProductCard: React.FC<ValueScoredProductCardProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-primary">
+                <span className="text-2xl font-bold bg-gradient-to-r from-aether-primary to-aether-glow bg-clip-text text-transparent">
                   {price}
                 </span>
                 {originalPrice && (
@@ -231,7 +216,7 @@ const ValueScoredProductCard: React.FC<ValueScoredProductCardProps> = ({
 
             {/* Value Score with dual encoding */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-r from-aether-primary/10 to-aether-glow/10 border border-aether-glow/20 shadow-glow">
                 <Star 
                   className={cn(
                     "w-4 h-4",

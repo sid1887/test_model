@@ -15,8 +15,11 @@ from app.core.database import init_db
 from app.api.routes import analysis, analysis_new, comparison, health, price_comparison, metrics, seed, user, retailers, ai, health_services
 from app.api.routes import alerts, smart_lists  # New feature routes
 from app.api.routes import analytics_features  # Analytics & forecasting
+from app.api.routes import search_v2  # God-powered search engine
 from app.core.monitoring import setup_monitoring
 from app.core.middleware import setup_middleware
+from app.core.service_registry import registry
+from app.core.cache import cache_manager
 
 
 @asynccontextmanager
@@ -128,11 +131,14 @@ app.include_router(alerts.router, tags=["price-alerts"])
 app.include_router(smart_lists.router, tags=["smart-lists"])
 app.include_router(analytics_features.router, tags=["analytics-features"])
 
+# God-powered Search Engine V2
+app.include_router(search_v2.router, tags=["search-v2-god-engine"])
+
 # Include analytics router for enhanced data pipelines and pricing analytics
 try:
     from app.api.routes.analytics import router as analytics_router
     app.include_router(analytics_router, tags=["analytics"])
-    print("âœ… Analytics routes loaded successfully")
+    print("✅ Analytics routes loaded successfully")
 except Exception as e:
     print(f"⚠️ Failed to load analytics routes: {e}")
 

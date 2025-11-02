@@ -21,7 +21,7 @@ class WebScraper {
     this.proxyServiceUrl = process.env.PROXY_SERVICE_URL || 'http://proxy-api:8001';
     this.haproxyUrl = process.env.HAPROXY_URL || 'http://cumpair-proxy-manager:8080';
     this.captchaServiceUrl = process.env.CAPTCHA_SERVICE_URL || 'http://captcha-solver:9001';
-    
+
     // Proxy rotation settings
     this.useProxyRotation = process.env.USE_PROXY_ROTATION !== 'false';
     this.currentProxy = null;
@@ -45,7 +45,7 @@ class WebScraper {
       proxiesUsed: 0,
       captchasSolved: 0
     };
-    
+
     // Initialize proxy pool
     this.initializeProxyPool().catch(err =>
       logger.warn('Proxy pool initialization failed, continuing without proxies:', err.message)
@@ -58,7 +58,7 @@ class WebScraper {
       const response = await axios.get(`${this.proxyServiceUrl}/api/v1/proxies/list`, {
         timeout: 3000
       });
-      
+
       if (response.data && response.data.proxies) {
         this.proxyPool = response.data.proxies.slice(0, 10); // Use top 10 proxies
         logger.info(`Initialized proxy pool with ${this.proxyPool.length} proxies`);
@@ -73,9 +73,9 @@ class WebScraper {
     if (this.proxyPool.length === 0) {
       return null;
     }
-    
+
     this.requestsSinceProxyRotation++;
-    
+
     if (this.requestsSinceProxyRotation >= this.proxyRotationInterval || !this.currentProxy) {
       const randomIndex = Math.floor(Math.random() * this.proxyPool.length);
       this.currentProxy = this.proxyPool[randomIndex];
@@ -83,27 +83,27 @@ class WebScraper {
       this.stats.proxiesUsed++;
       logger.info(`Rotated to proxy: ${this.currentProxy.host}:${this.currentProxy.port}`);
     }
-    
+
     return this.currentProxy;
   }
 
   async solveCaptcha(imageData, type = 'image') {
     try {
       logger.info('Attempting to solve CAPTCHA...');
-      
+
       const response = await axios.post(`${this.captchaServiceUrl}/api/v1/solve`, {
         image: imageData,
         type
       }, {
         timeout: 30000 // 30 second timeout for captcha solving
       });
-      
+
       if (response.data && response.data.solution) {
         this.stats.captchasSolved++;
         logger.info('CAPTCHA solved successfully');
         return response.data.solution;
       }
-      
+
       throw new Error('No solution in captcha response');
     } catch (error) {
       logger.error(`CAPTCHA solving failed: ${error.message}`);
@@ -130,7 +130,7 @@ class WebScraper {
           height: 768
         }
       };
-      
+
       // Add proxy configuration if requested and available
       if (useProxy && this.useProxyRotation) {
         const proxy = await this.getNextProxy();
@@ -210,10 +210,10 @@ class WebScraper {
         try {
           // Take screenshot of captcha
           const captchaScreenshot = await page.screenshot({ encoding: 'base64' });
-          
+
           // Attempt to solve
           const solution = await this.solveCaptcha(captchaScreenshot, 'image');
-          
+
           if (solution) {
             // Try to input solution (this is simplified, real implementation would be more complex)
             await page.evaluate((sol) => {
@@ -221,7 +221,7 @@ class WebScraper {
                            document.querySelector('input[type="text"]');
               if (input) input.value = sol;
             }, solution);
-            
+
             logger.info('CAPTCHA solution applied');
           } else {
             logger.warn('CAPTCHA solving failed, continuing anyway...');
@@ -241,13 +241,13 @@ class WebScraper {
         try {
           await page.waitForSelector(options.selectors.products, { timeout: 10000 });
           logger.info(`Products selector found: ${options.selectors.products}`);
-          
+
           // Scroll to load lazy images
           await page.evaluate(() => {
             window.scrollTo(0, document.body.scrollHeight / 2);
           });
           await new Promise(resolve => setTimeout(resolve, 1000));
-          
+
         } catch (waitError) {
           logger.warn(`Products selector not found within 10s: ${options.selectors.products}`);
         }
@@ -267,7 +267,7 @@ class WebScraper {
       if (options.selectors) {
         // ALWAYS include HTML for downstream processing
         data.html = content;
-        
+
         for (const [key, selector] of Object.entries(options.selectors)) {
           if (typeof selector === 'string') {
             data[key] = $(selector).text().trim();

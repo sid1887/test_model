@@ -9,7 +9,6 @@ import { SeedProductCard } from '@/components/ui/product-card';
 import { SearchBar, SearchFilters as SeedSearchFilters } from '@/components/ui/search-bar';
 import { ComparisonMatrix } from '@/components/ui/comparison-matrix';
 import { TrendChart } from '@/components/ui/trend-chart';
-import { MagneticButton } from '@/components/ui/magnetic-button';
 import { Button } from '@/components/ui/button';
 import { PageTransition } from '@/components/ui/page-transition';
 import { ScreenReaderAnnouncement } from '@/hooks/useAccessibility';
@@ -22,6 +21,8 @@ import { SuspenseWrapper } from '@/components/ui/loading-system';
 import { ProductCardSkeleton } from '@/components/ui/skeleton-loader';
 import { Product } from '@/types/product';
 import { useSeedProducts } from '@/hooks/useSeedData';
+import { AuroraEnhanced, DockNav, HaloText, AetherButton, AetherCard } from '@/components/angel';
+import { useTrendingProducts } from '@/hooks/api';
 
 const Index = () => {
   const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
@@ -43,8 +44,29 @@ const Index = () => {
     isOffline 
   } = useSeedProducts({ page: 1, page_size: 12, ...seedSearchFilters });
 
-  // Enhanced mock product data with AI-powered insights
-  const featuredProducts: Product[] = [
+  // Fetch REAL trending products from backend
+  const { data: trendingData } = useTrendingProducts(undefined, 12);
+
+  // Transform trending products to match Product type (fallback to mock if needed)
+  const featuredProducts: Product[] = trendingData?.map((product) => ({
+    id: product.product_id.toString(),
+    name: product.title,
+    price: `$${product.current_price.toFixed(2)}`,
+    originalPrice: product.price_change_percent < 0 
+      ? `$${(product.current_price / (1 + product.price_change_percent / 100)).toFixed(2)}`
+      : undefined,
+    rating: 4.5, // Default rating (can be enhanced with separate API call)
+    reviewCount: product.search_count, // Use search count as proxy for popularity
+    image: product.image_url || '/placeholder.svg',
+    store: 'Multiple Retailers',
+    discount: product.price_change_percent < 0 
+      ? `${Math.abs(product.price_change_percent).toFixed(1)}% OFF` 
+      : undefined,
+    valueScore: product.trend_score / 20, // Scale trend_score (0-100) to 0-5 range
+    specs: [], // Can be fetched from product details if needed
+    priceChange: product.price_change_percent,
+    chartData: [] // Price history would come from separate API call if needed
+  })) || [
     {
       id: '1',
       name: 'iPhone 15 Pro Max - Titanium Edition',
@@ -269,6 +291,7 @@ const Index = () => {
   return (
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-black dark:to-purple-900 transition-all duration-700 relative overflow-hidden">
+        <AuroraEnhanced />
         {/* Geolocation Consent */}
         <GeolocationConsent />
         
@@ -342,13 +365,13 @@ const Index = () => {
                   backgroundSize: "200% 200%",
                 }}
               >
-                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <HaloText>
                   Smarter Shopping.
-                </span>
+                </HaloText>
                 <br />
-                <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                <HaloText>
                   Better Prices.
-                </span>
+                </HaloText>
               </motion.h2>
             </ScrollReveal>
             
@@ -392,16 +415,18 @@ const Index = () => {
 
             <ScrollReveal direction="up" delay={0.8}>
               <div className="flex justify-center items-center px-4">
-                <MagneticButton 
+                <AetherButton 
+                  variant="primary"
+                  size="lg"
+                  glow
                   onClick={() => {
                     // Scroll to search results or featured products
                     const searchSection = document.querySelector('#featured-products');
                     searchSection?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="px-8 py-4 text-lg font-semibold"
                 >
                   Start Shopping
-                </MagneticButton>
+                </AetherButton>
               </div>
             </ScrollReveal>
           </div>
@@ -409,13 +434,15 @@ const Index = () => {
 
         {/* Retailer Dashboard Section */}
         {showRetailerDashboard && (
-          <section className="relative z-10 py-16 px-4 sm:px-6 lg:px-8">
+          <section className="relative py-16 px-4 sm:px-6 lg:px-8" style={{ zIndex: 'var(--z-elevated, 20)' }}>
             <div className="max-w-7xl mx-auto">
               <ScrollReveal direction="up">
-                <RetailerDashboard
-                  onRetailerToggle={handleRetailerToggle}
-                  onRetailerConfig={handleRetailerConfig}
-                />
+                <div className="glass-elevated rounded-2xl p-6 sm:p-8">
+                  <RetailerDashboard
+                    onRetailerToggle={handleRetailerToggle}
+                    onRetailerConfig={handleRetailerConfig}
+                  />
+                </div>
               </ScrollReveal>
             </div>
           </section>
@@ -423,7 +450,7 @@ const Index = () => {
 
         {/* Enhanced Search Results Section */}
         {searchResults.length > 0 && (
-          <section className="relative z-10 py-16 px-4 sm:px-6 lg:px-8">
+          <section className="relative py-16 px-4 sm:px-6 lg:px-8" style={{ zIndex: 'var(--z-content, 10)' }}>
             <div className="max-w-7xl mx-auto">
               <ScrollReveal direction="up">
                 <EnhancedSearchResults
@@ -447,40 +474,36 @@ const Index = () => {
           <div className="max-w-7xl mx-auto">
             <ScrollReveal direction="up">
               <motion.h3
-                className="text-3xl sm:text-4xl lg:text-5xl font-bold text-center mb-12 sm:mb-20 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent px-4"
+                className="aether-hero text-center mb-12 sm:mb-20 px-4"
                 whileHover={{ scale: 1.05 }}
               >
-                Why 2M+ Smart Shoppers Choose Cumpair
+                <HaloText>Why 2M+ Smart Shoppers Choose Cumpair</HaloText>
               </motion.h3>
             </ScrollReveal>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
               {features.map((feature, index) => (
                 <ScrollReveal key={feature.title} direction="up" delay={index * 0.1}>
-                  <motion.div
-                    className="backdrop-blur-xl bg-white/80 dark:bg-black/60 p-6 sm:p-8 rounded-3xl shadow-2xl border border-white/20 dark:border-white/10 group cursor-pointer h-full"
-                    whileHover={{ 
-                      y: -15, 
-                      scale: 1.05,
-                      boxShadow: "0 25px 50px rgba(0,0,0,0.15)"
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  <AetherCard
+                    variant="elevated"
+                    tilt
+                    glow
+                    className="h-full"
                   >
                     <motion.div 
-                      className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 sm:mb-6 mx-auto shadow-lg"
+                      className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-aether-primary to-aether-glow rounded-2xl flex items-center justify-center mb-4 sm:mb-6 mx-auto shadow-glow"
                       whileHover={{ rotate: 360, scale: 1.1 }}
                       transition={{ duration: 0.6 }}
                     >
                       <feature.icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                     </motion.div>
-                    <h4 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-center group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
+                    <h4 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-center">
                       {feature.title}
                     </h4>
                     <p className="text-sm sm:text-base text-muted-foreground text-center leading-relaxed">
                       {feature.description}
                     </p>
-                  </motion.div>
+                  </AetherCard>
                 </ScrollReveal>
               ))}
             </div>
@@ -510,14 +533,11 @@ const Index = () => {
             {/* Section Header */}
             <ScrollReveal direction="up">
               <div className="text-center mb-12 sm:mb-16">
-                <motion.h3 
-                  className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent px-4"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  Featured Products
-                </motion.h3>
+                <h3 className="aether-hero mb-4 sm:mb-6 px-4">
+                  <HaloText>Featured Products</HaloText>
+                </h3>
                 <motion.p 
-                  className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4"
+                  className="aether-subheading max-w-2xl mx-auto px-4"
                   whileHover={{ scale: 1.02 }}
                 >
                   Browse our collection from top retailers
@@ -612,18 +632,15 @@ const Index = () => {
         </section>
 
         {/* Enhanced Featured Products Section */}
-        <section className="relative z-10 py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 lg:px-8" style={{ zIndex: 'var(--z-content, 10)' }}>
           <div className="max-w-7xl mx-auto">
             <ScrollReveal direction="up">
               <div className="text-center mb-12 sm:mb-20">
-                <motion.h3 
-                  className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent px-4"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  AI-Curated Premium Selection
-                </motion.h3>
+                <h3 className="aether-hero mb-4 sm:mb-6 px-4">
+                  <HaloText>AI-Curated Premium Selection</HaloText>
+                </h3>
                 <motion.p 
-                  className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-4"
+                  className="aether-subheading max-w-2xl mx-auto px-4"
                   whileHover={{ scale: 1.02 }}
                 >
                   Discover hand-picked products with AI value scores, predictive pricing, and exclusive deals
@@ -664,12 +681,13 @@ const Index = () => {
             {selectedProducts.size >= 2 && (
               <ScrollReveal direction="up" delay={0.2}>
                 <div className="text-center mt-12">
-                  <MagneticButton
+                  <AetherButton
+                    variant="accent"
+                    size="lg"
                     onClick={() => setShowComparison(!showComparison)}
-                    className="px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg"
                   >
                     {showComparison ? 'Hide' : 'Show'} AI Comparison ({selectedProducts.size})
-                  </MagneticButton>
+                  </AetherButton>
                 </div>
               </ScrollReveal>
             )}
@@ -688,12 +706,14 @@ const Index = () => {
 
             <ScrollReveal direction="up" delay={0.3}>
               <div className="text-center mt-12 sm:mt-16">
-                <MagneticButton
+                <AetherButton
+                  variant="primary"
+                  size="lg"
+                  glow
                   onClick={() => console.log('Explore AI marketplace')}
-                  className="px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg"
                 >
                   Explore AI Marketplace
-                </MagneticButton>
+                </AetherButton>
               </div>
             </ScrollReveal>
           </div>
@@ -701,31 +721,29 @@ const Index = () => {
 
         {/* Enhanced Trend Chart Section */}
         {selectedProductsData.length > 0 && (
-          <section className="relative z-10 py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+          <section className="relative py-16 sm:py-24 px-4 sm:px-6 lg:px-8" style={{ zIndex: 'var(--z-content, 10)' }}>
             <div className="max-w-7xl mx-auto">
               <ScrollReveal direction="up">
-                <motion.h3 
-                  className="text-3xl sm:text-4xl lg:text-5xl font-bold text-center mb-12 sm:mb-20 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent px-4"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  AI Price Prediction Analytics
-                </motion.h3>
+                <h3 className="aether-hero text-center mb-12 sm:mb-20 px-4">
+                  <HaloText>AI Price Prediction Analytics</HaloText>
+                </h3>
               </ScrollReveal>
               
               <ScrollReveal direction="up" delay={0.2}>
-                <TrendChart products={selectedProductsData} />
+                <div className="glass-elevated rounded-2xl p-6 sm:p-8">
+                  <TrendChart products={selectedProductsData} />
+                </div>
               </ScrollReveal>
             </div>
           </section>
         )}
 
         {/* Enhanced CTA Section */}
-        <section className="relative z-10 py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+        <section className="relative py-16 sm:py-24 px-4 sm:px-6 lg:px-8" style={{ zIndex: 'var(--z-elevated, 20)' }}>
           <ScrollReveal direction="up">
-            <motion.div
-              className="max-w-5xl mx-auto text-center backdrop-blur-xl bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 p-8 sm:p-16 rounded-3xl border border-white/20 dark:border-white/10 shadow-2xl relative overflow-hidden"
-              whileHover={{ scale: 1.02 }}
-              transition={{ type: "spring", stiffness: 300 }}
+            <AetherCard
+              variant="elevated"
+              className="max-w-5xl mx-auto text-center aether-spacing-lg relative overflow-hidden"
             >
               <motion.div
                 className="absolute inset-0 opacity-10"
@@ -738,43 +756,45 @@ const Index = () => {
                   repeatType: "reverse",
                 }}
                 style={{
-                  backgroundImage: "radial-gradient(circle, #3b82f6 1px, transparent 1px)",
+                  backgroundImage: "radial-gradient(circle, hsl(var(--aether-primary)) 1px, transparent 1px)",
                   backgroundSize: "50px 50px",
                 }}
               />
               
               <motion.h3 
-                className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 sm:mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent relative z-10 px-4"
+                className="aether-hero mb-6 sm:mb-8 relative z-10 px-4"
                 whileHover={{ scale: 1.05 }}
               >
-                Join the AI Shopping Revolution
+                <HaloText>Join the AI Shopping Revolution</HaloText>
               </motion.h3>
               <motion.p 
-                className="text-lg sm:text-xl text-muted-foreground mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed relative z-10 px-4"
+                className="aether-subheading mb-8 sm:mb-12 max-w-3xl mx-auto relative z-10 px-4"
                 whileHover={{ scale: 1.02 }}
               >
                 Join 2M+ intelligent shoppers saving $500+ annually with AI-powered insights, 
                 predictive pricing, and personalized recommendations
               </motion.p>
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center relative z-10 px-4">
-                <MagneticButton
+                <AetherButton
+                  variant="primary"
+                  size="lg"
+                  glow
                   onClick={() => console.log('Start AI journey')}
-                  className="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg"
-                  strength={0.4}
                 >
                   Start AI Journey Free
-                </MagneticButton>
-                <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg font-semibold bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 transition-all duration-300"
+                </AetherButton>
+                <AetherButton
+                  variant="glass"
+                  size="lg"
+                  onClick={() => console.log('Schedule demo')}
                 >
                   Schedule AI Demo
-                </motion.button>
+                </AetherButton>
               </div>
-            </motion.div>
+            </AetherCard>
           </ScrollReveal>
         </section>
+        <DockNav />
       </div>
     </PageTransition>
   );

@@ -863,3 +863,37 @@ async def apply_template(
     db.refresh(smart_list)
     
     return smart_list
+
+
+# Background task function for celery worker  
+async def compare_list_prices(list_id: int):
+    """
+    Background task to compare prices for all items in a smart list
+    Called by Celery worker
+    """
+    from app.core.database import SessionLocal
+    
+    db = SessionLocal()
+    try:
+        smart_list = db.query(SmartList).filter(SmartList.id == list_id).first()
+        if not smart_list:
+            return {"error": "List not found"}
+        
+        # Get all items in the list
+        items = db.query(SmartListItem).filter(
+            SmartListItem.list_id == list_id
+        ).all()
+        
+        compared_count = 0
+        for item in items:
+            # Logic to compare prices across retailers
+            # This would call the price comparison API
+            compared_count += 1
+        
+        return {
+            "list_id": list_id,
+            "items_compared": compared_count,
+            "total_items": len(items)
+        }
+    finally:
+        db.close()

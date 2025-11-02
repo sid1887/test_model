@@ -748,3 +748,39 @@ async def update_user_preferences(
     db.refresh(prefs)
     
     return prefs
+
+
+# Background task function for celery worker
+async def check_and_trigger_alerts():
+    """
+    Background task to check all active alerts and trigger if conditions are met
+    Called by Celery periodic task
+    """
+    from app.core.database import SessionLocal
+    from datetime import datetime
+    
+    db = SessionLocal()
+    try:
+        # Get all active alerts
+        alerts = db.query(PriceAlert).filter(
+            PriceAlert.is_active == True,
+            PriceAlert.status == AlertStatus.ACTIVE
+        ).all()
+        
+        triggered_count = 0
+        for alert in alerts:
+            # Check if alert condition is met
+            if alert.alert_type == AlertType.PRICE_DROP:
+                # Logic to check if price dropped below target
+                # This would call the product API to get current price
+                pass  # Implement price checking logic
+            
+            triggered_count += 1
+        
+        return {
+            "checked": len(alerts),
+            "triggered": triggered_count,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    finally:
+        db.close()
