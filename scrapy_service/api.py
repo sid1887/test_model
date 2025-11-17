@@ -8,13 +8,9 @@ Supports 15+ retailers with full service integration
 import json
 import logging
 import redis
-import scrapy
 import os
 import requests
 from flask import Flask, request, jsonify
-from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
-from spiders.ecommerce import EcommerceSpider
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
@@ -85,6 +81,67 @@ def get_retailers():
         'timestamp': datetime.now().isoformat()
     })
 
+def perform_search(query, sites=None):
+    """Core search logic that can be reused"""
+    if sites is None:
+        sites = SUPPORTED_RETAILERS[:10]  # Default to first 10
+    
+    # URLs to scrape for all supported retailers
+    urls = {
+        'amazon': f'https://www.amazon.com/s?k={query}',
+        'walmart': f'https://www.walmart.com/search?q={query}',
+        'ebay': f'https://www.ebay.com/sch/i.html?_nkw={query}',
+        'target': f'https://www.target.com/s?searchTerm={query}',
+        'bestbuy': f'https://www.bestbuy.com/site/searchpage.jsp?st={query}',
+        'newegg': f'https://www.newegg.com/p/pl?d={query}',
+        'flipkart': f'https://www.flipkart.com/search?q={query}',
+        'aliexpress': f'https://www.aliexpress.com/wholesale?SearchText={query}',
+        'costco': f'https://www.costco.com/CatalogSearch?keyword={query}',
+        'homedepot': f'https://www.homedepot.com/s/{query}',
+        'lowes': f'https://www.lowes.com/search?searchTerm={query}',
+        'macys': f'https://www.macys.com/shop/search?keyword={query}',
+        'overstock': f'https://www.overstock.com/search?keywords={query}',
+        'wayfair': f'https://www.wayfair.com/keyword.php?keyword={query}',
+        'zappos': f'https://www.zappos.com/search?term={query}',
+        'bhphotovideo': f'https://www.bhphotovideo.com/c/search?Ntt={query}',
+        'nordstrom': f'https://www.nordstrom.com/sr?keyword={query}'
+    }
+
+    # Queue jobs for all sites
+    for site in sites:
+        if site not in urls:
+            continue
+
+        try:
+            # Store job in Redis for processing
+            job_id = f"{site}:{query}:{datetime.now().timestamp()}"
+            job_data = {
+                'url': urls[site],
+                'site': site,
+                'query': query,
+                'job_id': job_id
+            }
+
+            redis_client.hset(f'scrape_job:{job_id}', mapping=job_data)
+            crawl_stats['total_requests'] += 1
+
+            logger.info(f"Queued scrape job for {site}: {urls[site]}")
+
+        except Exception as e:
+            logger.error(f"Error queueing {site}: {e}")
+            crawl_stats['failed_requests'] += 1
+            continue
+
+    crawl_stats['successful_requests'] += len(sites)
+    
+    return {
+        'query': query,
+        'status': 'processing',
+        'sites_queued': len(sites),
+        'message': 'Scraping jobs have been queued. Results will be available shortly.',
+        'timestamp': datetime.now().isoformat()
+    }
+
 @app.route('/api/search', methods=['POST'])
 def search():
     """Search for products across retailers using Scrapy"""
@@ -96,62 +153,8 @@ def search():
         if not query:
             return jsonify({'error': 'Query is required'}), 400
 
-        # URLs to scrape for all supported retailers
-        urls = {
-            'amazon': f'https://www.amazon.com/s?k={query}',
-            'walmart': f'https://www.walmart.com/search?q={query}',
-            'ebay': f'https://www.ebay.com/sch/i.html?_nkw={query}',
-            'target': f'https://www.target.com/s?searchTerm={query}',
-            'bestbuy': f'https://www.bestbuy.com/site/searchpage.jsp?st={query}',
-            'newegg': f'https://www.newegg.com/p/pl?d={query}',
-            'flipkart': f'https://www.flipkart.com/search?q={query}',
-            'aliexpress': f'https://www.aliexpress.com/wholesale?SearchText={query}',
-            'costco': f'https://www.costco.com/CatalogSearch?keyword={query}',
-            'homedepot': f'https://www.homedepot.com/s/{query}',
-            'lowes': f'https://www.lowes.com/search?searchTerm={query}',
-            'macys': f'https://www.macys.com/shop/search?keyword={query}',
-            'overstock': f'https://www.overstock.com/search?keywords={query}',
-            'wayfair': f'https://www.wayfair.com/keyword.php?keyword={query}',
-            'zappos': f'https://www.zappos.com/search?term={query}',
-            'bhphotovideo': f'https://www.bhphotovideo.com/c/search?Ntt={query}',
-            'nordstrom': f'https://www.nordstrom.com/sr?keyword={query}'
-        }
-
-        # Collect all products
-        products = []
-        for site in sites:
-            if site not in urls:
-                continue
-
-            try:
-                # Store job in Redis for processing
-                job_id = f"{site}:{query}:{datetime.now().timestamp()}"
-                job_data = {
-                    'url': urls[site],
-                    'site': site,
-                    'query': query,
-                    'job_id': job_id
-                }
-
-                redis_client.hset(f'scrape_job:{job_id}', mapping=job_data)
-                crawl_stats['total_requests'] += 1
-
-                logger.info(f"Queued scrape job for {site}: {urls[site]}")
-
-            except Exception as e:
-                logger.error(f"Error queueing {site}: {e}")
-                crawl_stats['failed_requests'] += 1
-                continue
-
-        crawl_stats['successful_requests'] += len(sites)
-        
-        return jsonify({
-            'query': query,
-            'status': 'processing',
-            'sites_queued': len(sites),
-            'message': 'Scraping jobs have been queued. Results will be available shortly.',
-            'timestamp': datetime.now().isoformat()
-        }), 202
+        result = perform_search(query, sites)
+        return jsonify(result), 202
 
     except Exception as e:
         logger.error(f'Search error: {e}')
@@ -182,7 +185,8 @@ def voice_search():
         logger.info(f'Voice search transcribed: {query}')
         
         # Perform regular search with transcribed query
-        return search_with_query(query)
+        result = perform_search(query)
+        return jsonify(result), 202
         
     except Exception as e:
         logger.error(f'Voice search error: {e}')
@@ -213,21 +217,12 @@ def image_search():
         logger.info(f'Image search description: {query}')
         
         # Perform regular search with image description
-        return search_with_query(query)
+        result = perform_search(query)
+        return jsonify(result), 202
         
     except Exception as e:
         logger.error(f'Image search error: {e}')
         return jsonify({'error': str(e)}), 500
-
-def search_with_query(query):
-    """Helper function to perform search with a query"""
-    data = {'query': query}
-    with app.test_request_context(
-        '/api/search',
-        method='POST',
-        json=data
-    ):
-        return search()
 
 @app.route('/api/search/parallel', methods=['POST'])
 def search_parallel():

@@ -2,6 +2,16 @@
 """
 Comprehensive Scrapy Integration Test
 Tests all 17 retailers and service integrations
+
+REQUIREMENTS:
+1. Start the Scrapy service first:
+   cd /home/runner/work/test_model/test_model/scrapy_service
+   python api.py
+
+2. Ensure Redis is running (for caching)
+
+3. Run this test:
+   python test_scrapy_integration.py
 """
 
 import requests
