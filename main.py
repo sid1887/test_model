@@ -16,6 +16,7 @@ from app.api.routes import analysis, analysis_new, comparison, health, price_com
 from app.api.routes import alerts, smart_lists  # New feature routes
 from app.api.routes import analytics_features  # Analytics & forecasting
 from app.api.routes import search_v2  # God-powered search engine
+from app.api.routes import scrapy  # Scrapy service integration
 from app.core.monitoring import setup_monitoring
 from app.core.middleware import setup_middleware
 from app.core.service_registry import registry
@@ -88,6 +89,17 @@ async def lifespan(app: FastAPI):
         print(f"🔍 Feature Extraction Service initialized (embeddings: {feature_extraction_service.embedding_counter})")
     except Exception as e:
         print(f"Warning: Could not initialize Feature Extraction Service: {e}")
+    
+    # Initialize Scrapy Service Client (17+ retailers)
+    try:
+        from app.services.scraping import scrapy_client
+        success = await scrapy_client.initialize()
+        if success:
+            print(f"🕷️  Scrapy Service initialized ({len(scrapy_client.supported_retailers)} retailers)")
+        else:
+            print("⚠️ Scrapy Service unavailable - falling back to Node.js scraper")
+    except Exception as e:
+        print(f"Warning: Could not initialize Scrapy Service: {e}")
 
     yield
 
@@ -141,6 +153,9 @@ app.include_router(analytics_features.router, tags=["analytics-features"])
 
 # God-powered Search Engine V2
 app.include_router(search_v2.router, tags=["search-v2-god-engine"])
+
+# Scrapy Service Integration (17+ retailers, multimodal search)
+app.include_router(scrapy.router, tags=["scrapy-integration"])
 
 # Include analytics router for enhanced data pipelines and pricing analytics
 try:
