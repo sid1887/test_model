@@ -1,6 +1,9 @@
 import json
 import redis
 import logging
+import os
+import requests
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +21,42 @@ class DuplicatesPipeline:
             raise DropItem(f"Duplicate item found: {item}")
 
         self.ids_seen.add(item_id)
+        return item
+
+
+class CLIPAnalysisPipeline:
+    """Analyze product images using CLIP service"""
+    
+    def __init__(self):
+        self.clip_service_url = os.getenv('CLIP_SERVICE_URL', 'http://web-api:8000')
+        self.enabled = os.getenv('ENABLE_CLIP_ANALYSIS', 'true').lower() == 'true'
+    
+    def process_item(self, item, spider):
+        if not self.enabled or not item.get('image'):
+            return item
+        
+        try:
+            # Send image to CLIP service for analysis
+            response = requests.post(
+                f'{self.clip_service_url}/api/v1/analyze/image',
+                json={
+                    'image_url': item['image'],
+                    'title': item.get('title', '')
+                },
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                analysis = response.json()
+                item['clip_embedding'] = analysis.get('embedding')
+                item['clip_features'] = analysis.get('features', [])
+                logger.info(f'CLIP analysis completed for: {item["title"][:50]}...')
+            else:
+                logger.warning(f'CLIP analysis failed with status: {response.status_code}')
+                
+        except Exception as e:
+            logger.error(f'Error during CLIP analysis: {e}')
+        
         return item
 
 
@@ -71,6 +110,11 @@ class RedisPipeline:
                 search_key = f"search:{item['site']}:{item.get('query', 'unknown')}"
                 self.redis_conn.rpush(search_key, json.dumps(dict(item)))
                 self.redis_conn.expire(search_key, 3600)
+                
+                # Store statistics
+                stats_key = f"stats:scrapy:{datetime.now().strftime('%Y-%m-%d')}"
+                self.redis_conn.hincrby(stats_key, f'{item["site"]}_products', 1)
+                self.redis_conn.expire(stats_key, 86400 * 7)  # 7 days
 
             except Exception as e:
                 logger.error(f'Error storing in Redis: {e}')

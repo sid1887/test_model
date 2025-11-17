@@ -39,6 +39,7 @@ DOWNLOADER_MIDDLEWARES = {
 # Pipeline
 ITEM_PIPELINES = {
     'pipelines.DuplicatesPipeline': 300,
+    'pipelines.CLIPAnalysisPipeline': 350,
     'pipelines.RedisPipeline': 400,
 }
 
