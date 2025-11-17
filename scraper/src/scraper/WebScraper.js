@@ -11,10 +11,10 @@ puppeteer.use(StealthPlugin());
 
 class WebScraper {
   constructor(options = {}) {
-    this.maxConcurrent = options.maxConcurrent || parseInt(process.env.MAX_CONCURRENT_SCRAPERS) || 5;
-    this.timeout = options.timeout || parseInt(process.env.DEFAULT_TIMEOUT) || 30000;
-    this.retryAttempts = options.retryAttempts || parseInt(process.env.RETRY_ATTEMPTS) || 3;
-    this.retryDelay = options.retryDelay || parseInt(process.env.RETRY_DELAY) || 1000;
+    this.maxConcurrent = options.maxConcurrent || parseInt(process.env.MAX_CONCURRENT_SCRAPERS) || 3;
+    this.timeout = options.timeout || parseInt(process.env.DEFAULT_TIMEOUT) || 60000;
+    this.retryAttempts = options.retryAttempts || parseInt(process.env.RETRY_ATTEMPTS) || 2;
+    this.retryDelay = options.retryDelay || parseInt(process.env.RETRY_DELAY) || 3000;
     this.headless = options.headless !== undefined ? options.headless : process.env.HEADLESS !== 'false';
 
     // Service URLs
@@ -35,7 +35,14 @@ class WebScraper {
       duration: 1000
     });
 
+    // Browser pool for reuse
+    this.sharedBrowser = null;
+    this.browserPool = [];
+    this.maxPoolSize = 2; // Max 2 browsers in pool
     this.activeBrowsers = new Set();
+    this.maxPagesPerBrowser = 5; // Max 5 concurrent pages per browser
+    this.pagesPerBrowser = new Map();
+
     this.stats = {
       totalRequests: 0,
       successfulRequests: 0,
@@ -115,6 +122,7 @@ class WebScraper {
     try {
       const launchOptions = {
         headless: 'new', // Use new headless mode to avoid deprecation warning
+        protocolTimeout: 60000, // 60 second protocol timeout
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -123,7 +131,15 @@ class WebScraper {
           '--no-first-run',
           '--no-zygote',
           '--disable-gpu',
-          '--disable-blink-features=AutomationControlled'
+          '--disable-blink-features=AutomationControlled',
+          '--start-maximized',
+          '--disable-background-networking',
+          '--disable-breakpad',
+          '--disable-client-side-phishing-detection',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-default-apps',
+          '--disable-extensions',
+          '--disable-hang-monitor'
         ],
         defaultViewport: {
           width: 1366,
@@ -143,15 +159,61 @@ class WebScraper {
       const browser = await puppeteer.launch(launchOptions);
 
       this.activeBrowsers.add(browser);
+      this.pagesPerBrowser.set(browser, 0);
 
       browser.on('disconnected', () => {
         this.activeBrowsers.delete(browser);
+        this.pagesPerBrowser.delete(browser);
       });
 
+      logger.info(`Created new browser instance. Active browsers: ${this.activeBrowsers.size}`);
       return browser;
     } catch (error) {
       logger.error('Failed to create browser:', error);
       throw error;
+    }
+  }
+
+  async getBrowserFromPool() {
+    // Try to reuse an existing browser with available page slots
+    for (const browser of this.browserPool) {
+      const pageCount = this.pagesPerBrowser.get(browser) || 0;
+      if (pageCount < this.maxPagesPerBrowser && this.activeBrowsers.has(browser)) {
+        logger.info(`Reusing browser from pool. Pages in use: ${pageCount}/${this.maxPagesPerBrowser}`);
+        return browser;
+      }
+    }
+
+    // Create new browser if pool is not at max size
+    if (this.browserPool.length < this.maxPoolSize) {
+      const browser = await this.createBrowser();
+      this.browserPool.push(browser);
+      logger.info(`Added new browser to pool. Pool size: ${this.browserPool.length}`);
+      return browser;
+    }
+
+    // Wait for a browser to have available slots
+    logger.warn('No available browsers in pool, waiting...');
+    let attempts = 0;
+    const maxWaitAttempts = 60; // 30 seconds max wait
+    while (attempts < maxWaitAttempts) {
+      for (const browser of this.browserPool) {
+        const pageCount = this.pagesPerBrowser.get(browser) || 0;
+        if (pageCount < this.maxPagesPerBrowser) {
+          return browser;
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts += 1;
+    }
+
+    throw new Error('Timeout waiting for available browser slot');
+  }
+
+  async releaseBrowserPage(browser) {
+    const pageCount = this.pagesPerBrowser.get(browser) || 0;
+    if (pageCount > 0) {
+      this.pagesPerBrowser.set(browser, pageCount - 1);
     }
   }
 
@@ -164,9 +226,11 @@ class WebScraper {
       // Apply rate limiting
       await this.rateLimiter.consume(new URL(url).hostname);
 
-      // Use proxy for e-commerce sites to avoid blocking
-      const useProxy = options.useProxy !== false && this.useProxyRotation;
-      browser = await this.createBrowser(useProxy);
+      // Get browser from pool instead of creating new one
+      browser = await this.getBrowserFromPool();
+      const pageCount = this.pagesPerBrowser.get(browser) || 0;
+      this.pagesPerBrowser.set(browser, pageCount + 1);
+
       page = await browser.newPage();
 
       // Set user agent with rotation
@@ -184,7 +248,7 @@ class WebScraper {
         await page.setExtraHTTPHeaders(options.headers);
       }
 
-      // Navigate to the page
+      // Navigate to the page with shorter timeout
       await page.goto(url, {
         waitUntil: options.waitUntil || 'domcontentloaded',
         timeout: this.timeout
@@ -231,25 +295,42 @@ class WebScraper {
         }
       }
 
-      // Wait for specific selector if provided
+      // Wait for specific selector if provided (with shorter timeout)
       if (options.waitForSelector) {
-        await page.waitForSelector(options.waitForSelector, { timeout: this.timeout });
+        try {
+          await page.waitForSelector(options.waitForSelector, { timeout: 8000 });
+        } catch (e) {
+          logger.warn(`Selector not found: ${options.waitForSelector}`);
+        }
       }
 
       // If selectors are provided, wait for the products selector
       if (options.selectors && options.selectors.products) {
         try {
-          await page.waitForSelector(options.selectors.products, { timeout: 10000 });
+          // Try to wait for the products selector with longer timeout (15 seconds)
+          await page.waitForSelector(options.selectors.products, { timeout: 15000 });
           logger.info(`Products selector found: ${options.selectors.products}`);
 
-          // Scroll to load lazy images
+          // Additional wait for lazy loading
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          // Scroll to load more content
           await page.evaluate(() => {
             window.scrollTo(0, document.body.scrollHeight / 2);
           });
           await new Promise(resolve => setTimeout(resolve, 1000));
 
         } catch (waitError) {
-          logger.warn(`Products selector not found within 10s: ${options.selectors.products}`);
+          logger.warn(`Products selector not found within 15s: ${options.selectors.products}`);
+          // Still try to extract - maybe products are there but selector is slightly different
+          try {
+            await page.evaluate(() => {
+              window.scrollTo(0, document.body.scrollHeight);
+            });
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } catch (e) {
+            logger.warn('Scroll attempt failed');
+          }
         }
       }
 
@@ -268,20 +349,8 @@ class WebScraper {
         // ALWAYS include HTML for downstream processing
         data.html = content;
 
-        for (const [key, selector] of Object.entries(options.selectors)) {
-          if (typeof selector === 'string') {
-            data[key] = $(selector).text().trim();
-          } else if (selector.multiple) {
-            data[key] = [];
-            $(selector.selector).each((i, elem) => {
-              data[key].push($(elem).text().trim());
-            });
-          } else if (selector.attribute) {
-            data[key] = $(selector.selector).attr(selector.attribute);
-          } else {
-            data[key] = $(selector.selector).text().trim();
-          }
-        }
+        // Don't try to extract individual selector data - just pass the HTML
+        // The server.js will handle extraction
       } else {
         // Return full page content if no selectors specified
         data = {
@@ -315,11 +384,19 @@ class WebScraper {
       const responseTime = Date.now() - startTime;
       this.updateStats(false, responseTime);
 
-      logger.error(`Failed to scrape ${url}:`, error);
+      logger.error(`Failed to scrape ${url}:`, error.message);
       throw error;
     } finally {
-      if (page) await page.close();
-      if (browser) await browser.close();
+      if (page) {
+        try {
+          await page.close();
+        } catch (e) {
+          logger.warn('Error closing page:', e.message);
+        }
+      }
+      if (browser) {
+        await this.releaseBrowserPage(browser);
+      }
     }
   }
 
@@ -339,29 +416,18 @@ class WebScraper {
       });
 
       const $ = cheerio.load(response.data);
-      let data = {};
+      const data = {};
+
+      // ALWAYS include HTML for downstream processing
+      data.html = response.data;
 
       if (options.selectors) {
-        for (const [key, selector] of Object.entries(options.selectors)) {
-          if (typeof selector === 'string') {
-            data[key] = $(selector).text().trim();
-          } else if (selector.multiple) {
-            data[key] = [];
-            $(selector.selector).each((i, elem) => {
-              data[key].push($(elem).text().trim());
-            });
-          } else if (selector.attribute) {
-            data[key] = $(selector.selector).attr(selector.attribute);
-          } else {
-            data[key] = $(selector.selector).text().trim();
-          }
-        }
+        // Don't extract individual selector data here - just pass the HTML
+        // The server.js will handle extraction
       } else {
-        data = {
-          title: $('title').text(),
-          content: $('body').text().trim(),
-          html: response.data
-        };
+        // Also include parsed content
+        data.title = $('title').text();
+        data.content = $('body').text().trim();
       }
 
       const responseTime = Date.now() - startTime;
@@ -498,7 +564,19 @@ class WebScraper {
   async cleanup() {
     logger.info('Cleaning up web scraper...');
 
-    // Close all active browsers
+    // Close all browsers in pool
+    for (const browser of this.browserPool) {
+      try {
+        await browser.close();
+        this.activeBrowsers.delete(browser);
+        this.pagesPerBrowser.delete(browser);
+      } catch (error) {
+        logger.error('Error closing browser in pool:', error);
+      }
+    }
+    this.browserPool = [];
+
+    // Close any remaining active browsers
     const browserPromises = Array.from(this.activeBrowsers).map(browser =>
       browser.close().catch(error => logger.error('Error closing browser:', error))
     );

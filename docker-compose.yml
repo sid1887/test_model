@@ -15,9 +15,9 @@ services:
       timeout: 5s
       retries: 3
 
-  # PostgreSQL database
+  # PostgreSQL database with pgvector
   postgres:
-    image: postgres:15-alpine
+    image: ankane/pgvector:latest
     environment:
       POSTGRES_DB: compair
       POSTGRES_USER: compair
@@ -26,6 +26,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c max_connections=200
+      -c work_mem=8MB
+      -c maintenance_work_mem=128MB
+      -c effective_cache_size=1GB
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U compair"]
       interval: 10s
@@ -118,6 +126,30 @@ services:
       - ./scraper/logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Scrapy-based high-performance scraper
+  scrapy_scraper:
+    build:
+      context: ./scrapy_service
+    profiles: ['scraper']
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PORT=5000
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./scrapy_service/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

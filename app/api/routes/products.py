@@ -70,7 +70,7 @@ async def list_products(
         # Apply search filter
         if search:
             search_filter = or_(
-                Product.name.ilike(f"%{search}%"),
+                Product.title.ilike(f"%{search}%"),
                 Product.brand.ilike(f"%{search}%"),
                 Product.category.ilike(f"%{search}%")
             )
@@ -92,15 +92,16 @@ async def list_products(
             "products": [
                 {
                     "id": product.id,
-                    "name": product.name,
+                    "title": product.title,
                     "brand": product.brand,
                     "category": product.category,
-                    "is_processed": product.is_processed,
+                    "main_image": product.main_image,
+                    "description": product.description,
+                    "avg_price": float(product.avg_price) if product.avg_price else None,
+                    "min_price": float(product.min_price) if product.min_price else None,
+                    "max_price": float(product.max_price) if product.max_price else None,
                     "created_at": product.created_at.isoformat() if product.created_at else None,
-                    "updated_at": product.updated_at.isoformat() if product.updated_at else None,
-                    "specifications": product.specifications,
-                    "image_path": product.image_path,
-                    "detection_confidence": float(product.detection_confidence) if product.detection_confidence else None
+                    "updated_at": product.updated_at.isoformat() if product.updated_at else None
                 }
                 for product in products
             ],
@@ -138,15 +139,14 @@ async def get_product(
             "success": True,
             "product": {
                 "id": product.id,
-                "name": product.name,
+                "title": product.title,
                 "brand": product.brand,
                 "category": product.category,
-                "is_processed": product.is_processed,
+                "main_image": product.main_image,
+                "description": product.description,
+                "avg_price": float(product.avg_price) if product.avg_price else None,
                 "created_at": product.created_at.isoformat() if product.created_at else None,
-                "updated_at": product.updated_at.isoformat() if product.updated_at else None,
-                "specifications": product.specifications,
-                "image_path": product.image_path,
-                "detection_confidence": float(product.detection_confidence) if product.detection_confidence else None
+                "updated_at": product.updated_at.isoformat() if product.updated_at else None
             },
             "message": f"Product {product_id} retrieved successfully"
         }
@@ -171,9 +171,11 @@ async def create_product(
 
         # Create product object
         new_product = Product(
-            name=product_data.name,
+            title=product_data.name,
             brand=product_data.brand,
             category=product_data.category,
+            description=product_data.description,
+            main_image=product_data.image_url,
             specifications=product_data.specifications or {},
             is_processed=False
         )
@@ -187,14 +189,13 @@ async def create_product(
             "success": True,
             "product": {
                 "id": new_product.id,
-                "name": new_product.name,
+                "title": new_product.title,
                 "brand": new_product.brand,
                 "category": new_product.category,
-                "is_processed": new_product.is_processed,
+                "main_image": new_product.main_image,
+                "description": new_product.description,
                 "created_at": new_product.created_at.isoformat() if new_product.created_at else None,
-                "updated_at": new_product.updated_at.isoformat() if new_product.updated_at else None,
-                "specifications": new_product.specifications,
-                "image_path": new_product.image_path
+                "updated_at": new_product.updated_at.isoformat() if new_product.updated_at else None
             },
             "message": f"Product {new_product.id} created successfully"
         }
@@ -227,13 +228,15 @@ async def update_product(
 
         # Update fields if provided
         if product_data.name is not None:
-            product.name = product_data.name
+            product.title = product_data.name
         if product_data.brand is not None:
             product.brand = product_data.brand
         if product_data.category is not None:
             product.category = product_data.category
-        if product_data.specifications is not None:
-            product.specifications = product_data.specifications
+        if product_data.description is not None:
+            product.description = product_data.description
+        if product_data.image_url is not None:
+            product.main_image = product_data.image_url
 
         # Save changes
         await db.commit()
@@ -243,14 +246,14 @@ async def update_product(
             "success": True,
             "product": {
                 "id": product.id,
-                "name": product.name,
+                "title": product.title,
                 "brand": product.brand,
                 "category": product.category,
-                "is_processed": product.is_processed,
+                "main_image": product.main_image,
+                "description": product.description,
+                "avg_price": float(product.avg_price) if product.avg_price else None,
                 "created_at": product.created_at.isoformat() if product.created_at else None,
-                "updated_at": product.updated_at.isoformat() if product.updated_at else None,
-                "specifications": product.specifications,
-                "image_path": product.image_path
+                "updated_at": product.updated_at.isoformat() if product.updated_at else None
             },
             "message": f"Product {product_id} updated successfully"
         }
@@ -285,7 +288,7 @@ async def delete_product(
         # Store product data before deletion
         product_data = {
             "id": product.id,
-            "name": product.name,
+            "title": product.title,
             "brand": product.brand,
             "category": product.category
         }
@@ -331,17 +334,10 @@ async def get_product_stats(db: AsyncSession = Depends(get_db)):
         brands_result = await db.execute(brands_stmt)
         brands = [brand for brand in brands_result.scalars().all() if brand]
 
-        # Get processed count
-        processed_stmt = select(func.count(Product.id)).where(Product.is_processed.is_(True))
-        processed_result = await db.execute(processed_stmt)
-        processed_count = processed_result.scalar()
-
         return {
             "success": True,
             "stats": {
                 "total_products": total_products,
-                "processed_products": processed_count,
-                "unprocessed_products": total_products - processed_count,
                 "categories": categories,
                 "brands": brands,
                 "category_count": len(categories),

@@ -209,64 +209,29 @@ async def get_analytics_overview(
     """
     user_id = get_current_user_id()
     
-    # TODO: Replace with actual queries when models are imported
-    # For now, return mock data structure
-    
-    from app.models.alert import PriceAlert, AlertStatus, AlertEvent, AlertEventType
-    from app.models.smart_list import SmartList, ListCompareJob, CompareJobStatus
-    
-    # Count statistics
-    # total_products = db.query(func.count(Product.id)).scalar() or 0
-    # total_retailers = db.query(func.count(Retailer.id)).scalar() or 0
-    total_products = 0
-    total_retailers = 0
-    total_price_points = 0
-    
-    # Alert statistics
-    active_alerts = db.query(func.count(PriceAlert.id)) \
-        .filter(PriceAlert.user_id == user_id) \
-        .filter(PriceAlert.status == AlertStatus.ACTIVE) \
-        .scalar() or 0
-    
-    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    alerts_fired_today = db.query(func.count(AlertEvent.id)) \
-        .join(PriceAlert) \
-        .filter(PriceAlert.user_id == user_id) \
-        .filter(AlertEvent.event_type == AlertEventType.FIRED) \
-        .filter(AlertEvent.created_at >= today) \
-        .scalar() or 0
-    
-    # Smart list statistics
-    smart_lists = db.query(func.count(SmartList.id)) \
-        .filter(SmartList.user_id == user_id) \
-        .scalar() or 0
-    
-    comparisons_today = db.query(func.count(ListCompareJob.id)) \
-        .filter(ListCompareJob.user_id == user_id) \
-        .filter(ListCompareJob.created_at >= today) \
-        .scalar() or 0
-    
-    # Forecast statistics
-    forecasts_available = db.query(func.count(PriceForecast.id)) \
-        .filter(PriceForecast.is_active == True) \
-        .scalar() or 0
-    
-    # Calculate average forecast accuracy from validations
-    avg_accuracy = db.query(func.avg(ForecastValidation.accuracy_band_10pct)) \
-        .scalar() or None
+    # TODO: Implement async SQLAlchemy queries for all statistics
+    # Returning mock data structure for now - database migration needed
     
     return {
-        "total_products": total_products,
-        "total_retailers": total_retailers,
-        "total_price_points": total_price_points,
-        "active_alerts": active_alerts,
-        "alerts_fired_today": alerts_fired_today,
-        "smart_lists": smart_lists,
-        "comparisons_today": comparisons_today,
-        "forecasts_available": forecasts_available,
-        "avg_forecast_accuracy": avg_accuracy,
-        "top_trending_products": [],  # TODO: Implement trending logic
-        "recent_price_drops": []  # TODO: Implement price drop detection
+        "summary": {
+            "total_products": 0,
+            "total_retailers": 0,
+            "total_price_points": 0
+        },
+        "alerts": {
+            "active": 0,
+            "fired_today": 0
+        },
+        "smart_lists": {
+            "total": 0,
+            "comparisons_today": 0
+        },
+        "forecasts": {
+            "available": 0
+        },
+        "trending_products": [],
+        "recent_price_drops": [],
+        "top_retailers": []
     }
 
 

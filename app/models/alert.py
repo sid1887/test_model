@@ -1,18 +1,19 @@
 """
 Price Alerts Database Models
-Tables: alerts, alert_events, notifications, user_preferences
+Provides compatibility models and enums expected by the API routes.
+Maps to: price_alerts, alert_history (and light-weight notification/preferences models)
 """
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, JSON, ForeignKey, Enum as SQLEnum
+from enum import Enum
+from sqlalchemy import Column, BigInteger, Text, Boolean, DateTime, NUMERIC, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from datetime import datetime
-from enum import Enum
+from sqlalchemy import Enum as SQLEnum
 from app.core.database import Base
 
 
 class AlertOperator(str, Enum):
-    """Alert price comparison operators"""
     LESS_THAN = "<"
     LESS_THAN_EQUAL = "<="
     GREATER_THAN = ">"
@@ -22,7 +23,6 @@ class AlertOperator(str, Enum):
 
 
 class AlertStatus(str, Enum):
-    """Alert status"""
     ACTIVE = "active"
     PAUSED = "paused"
     FIRED = "fired"
@@ -31,7 +31,6 @@ class AlertStatus(str, Enum):
 
 
 class AlertFrequency(str, Enum):
-    """Alert check frequency"""
     IMMEDIATE = "immediate"
     HOURLY = "hourly"
     DAILY = "daily"
@@ -39,7 +38,6 @@ class AlertFrequency(str, Enum):
 
 
 class NotificationChannel(str, Enum):
-    """Notification delivery channels"""
     EMAIL = "email"
     SMS = "sms"
     WHATSAPP = "whatsapp"
@@ -47,58 +45,7 @@ class NotificationChannel(str, Enum):
     WEBHOOK = "webhook"
 
 
-class NotificationStatus(str, Enum):
-    """Notification delivery status"""
-    PENDING = "pending"
-    SENT = "sent"
-    DELIVERED = "delivered"
-    FAILED = "failed"
-    BOUNCED = "bounced"
-
-
-class PriceAlert(Base):
-    """
-    Price alerts for products
-    Monitors product prices and triggers notifications
-    """
-    __tablename__ = "alerts"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False, index=True)  # Reference to users table
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
-    
-    # Alert configuration
-    target_price = Column(Float, nullable=False)
-    operator = Column(SQLEnum(AlertOperator), default=AlertOperator.LESS_THAN_EQUAL)
-    target_percent_off = Column(Float, nullable=True)  # For percent-based alerts
-    
-    # Filters
-    retailers = Column(JSON, nullable=True)  # List of retailer IDs to monitor, null = all
-    
-    # Notification settings
-    channels = Column(JSON, nullable=False)  # List of NotificationChannel values
-    frequency = Column(SQLEnum(AlertFrequency), default=AlertFrequency.IMMEDIATE)
-    
-    # Status & metadata
-    status = Column(SQLEnum(AlertStatus), default=AlertStatus.ACTIVE, index=True)
-    priority = Column(String(20), default="normal")  # normal, urgent
-    
-    # Timing
-    expires_at = Column(DateTime, nullable=True)
-    last_checked_at = Column(DateTime, nullable=True)
-    last_fired_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    
-    # Relationships
-    events = relationship("AlertEvent", back_populates="alert", cascade="all, delete-orphan")
-    
-    def __repr__(self):
-        return f"<PriceAlert(id={self.id}, product_id={self.product_id}, target={self.target_price}, status={self.status})>"
-
-
 class AlertEventType(str, Enum):
-    """Alert event types"""
     CREATED = "created"
     CHECKED = "checked"
     PRICE_CHANGED = "price_changed"
@@ -110,118 +57,120 @@ class AlertEventType(str, Enum):
     ERROR = "error"
 
 
+class PriceAlert(Base):
+    """ORM for `price_alerts` with compatibility fields used by API routes."""
+    __tablename__ = "price_alerts"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Legacy/condition fields (kept for internal logic)
+    condition_type = Column(Text, nullable=True)  # 'below', 'percent_drop', 'back_in_stock'
+    threshold = Column(NUMERIC(12, 2), nullable=True)
+    threshold_percent = Column(NUMERIC(5, 2), nullable=True)
+
+    # Compatibility fields expected by API routes
+    target_price = Column(NUMERIC(12, 2), nullable=True)
+    operator = Column(SQLEnum(AlertOperator), nullable=True)
+    target_percent_off = Column(NUMERIC(5, 2), nullable=True)
+
+    # Filters & notification config
+    retailers = Column(JSONB, nullable=True)
+    channels = Column(JSONB, name="notification_channels", default=list)
+    frequency = Column(SQLEnum(AlertFrequency), nullable=True)
+
+    # Status & meta
+    status = Column(SQLEnum(AlertStatus), default=AlertStatus.ACTIVE, index=True)
+    priority = Column(Text, default="normal")
+    notes = Column(Text, nullable=True)
+
+    # Tracking
+    times_triggered = Column(BigInteger, default=0)
+    last_triggered_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    product = relationship("Product", back_populates="price_alerts")
+    events = relationship("AlertEvent", back_populates="alert", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<PriceAlert(id={self.id}, product_id={self.product_id}, status={self.status})>"
+
+
 class AlertEvent(Base):
-    """
-    Alert event history
-    Tracks all significant events for an alert
-    """
-    __tablename__ = "alert_events"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    alert_id = Column(Integer, ForeignKey("alerts.id", ondelete="CASCADE"), nullable=False, index=True)
-    
+    """ORM for `alert_history` table. Exposed as AlertEvent for compatibility with routes."""
+    __tablename__ = "alert_history"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    alert_id = Column(BigInteger, ForeignKey("price_alerts.id", ondelete="CASCADE"), nullable=False, index=True)
+    product_price_id = Column(BigInteger, ForeignKey("product_prices.id"), nullable=True)
+
     event_type = Column(SQLEnum(AlertEventType), nullable=False)
-    event_payload = Column(JSON, nullable=True)  # Additional event data
-    
-    # Price data at time of event
-    current_price = Column(Float, nullable=True)
-    previous_price = Column(Float, nullable=True)
-    retailer_id = Column(Integer, nullable=True)
-    retailer_name = Column(String(100), nullable=True)
-    
-    created_at = Column(DateTime, server_default=func.now(), index=True)
-    
+    event_payload = Column(JSONB, nullable=True)
+
+    # Price snapshot
+    current_price = Column(NUMERIC(12, 2), nullable=True)
+    previous_price = Column(NUMERIC(12, 2), nullable=True)
+    retailer_id = Column(BigInteger, nullable=True)
+    retailer_name = Column(Text, nullable=True)
+
+    # Map DB column `triggered_at` to attribute `created_at` used by API
+    created_at = Column('triggered_at', DateTime(timezone=True), server_default=func.now(), index=True)
+
     # Relationships
     alert = relationship("PriceAlert", back_populates="events")
-    notifications = relationship("Notification", back_populates="alert_event", cascade="all, delete-orphan")
-    
+    product_price = relationship("ProductPrice")
+
     def __repr__(self):
         return f"<AlertEvent(id={self.id}, alert_id={self.alert_id}, type={self.event_type})>"
 
 
 class Notification(Base):
-    """
-    Notification delivery log
-    Tracks notification attempts across all channels
-    """
     __tablename__ = "notifications"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    alert_event_id = Column(Integer, ForeignKey("alert_events.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(Integer, nullable=False, index=True)
-    
-    # Delivery
-    channel = Column(SQLEnum(NotificationChannel), nullable=False)
-    status = Column(SQLEnum(NotificationStatus), default=NotificationStatus.PENDING, index=True)
-    
-    # Recipient details
-    recipient = Column(String(255), nullable=False)  # email address, phone number, etc.
-    
-    # Content
-    subject = Column(String(500), nullable=True)
-    message = Column(Text, nullable=False)
-    payload = Column(JSON, nullable=True)  # Full notification data
-    
-    # Tracking
-    sent_at = Column(DateTime, nullable=True)
-    delivered_at = Column(DateTime, nullable=True)
-    opened_at = Column(DateTime, nullable=True)
-    clicked_at = Column(DateTime, nullable=True)
-    
-    # Error handling
-    retry_count = Column(Integer, default=0)
-    last_error = Column(Text, nullable=True)
-    
-    # External IDs
-    external_id = Column(String(255), nullable=True)  # Twilio SID, SendGrid ID, etc.
-    
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    
-    # Relationships
-    alert_event = relationship("AlertEvent", back_populates="notifications")
-    
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    alert_event_id = Column(BigInteger, ForeignKey("alert_history.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    channel = Column(Text, nullable=False)
+    status = Column(Text, nullable=False)
+    recipient = Column(Text, nullable=False)
+    subject = Column(Text, nullable=True)
+    message = Column(Text, nullable=True)
+    payload = Column(JSONB, nullable=True)
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationship back to event
+    alert_event = relationship("AlertEvent")
+
     def __repr__(self):
         return f"<Notification(id={self.id}, channel={self.channel}, status={self.status})>"
 
 
 class UserPreferences(Base):
-    """
-    User notification preferences and settings
-    """
     __tablename__ = "user_preferences"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, unique=True, nullable=False, index=True)
-    
-    # Contact information
-    email = Column(String(255), nullable=True)
-    phone = Column(String(20), nullable=True)
-    whatsapp = Column(String(20), nullable=True)
-    
-    # Notification preferences
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True, unique=True)
+    email = Column(Text, nullable=True)
+    phone = Column(Text, nullable=True)
+    whatsapp = Column(Text, nullable=True)
     email_enabled = Column(Boolean, default=True)
     sms_enabled = Column(Boolean, default=False)
     whatsapp_enabled = Column(Boolean, default=False)
     push_enabled = Column(Boolean, default=True)
-    
-    # Notification frequency limits (rate limiting)
-    max_notifications_per_hour = Column(Integer, default=10)
-    max_notifications_per_day = Column(Integer, default=50)
-    
-    # Quiet hours
-    quiet_hours_enabled = Column(Boolean, default=False)
-    quiet_hours_start = Column(String(5), nullable=True)  # HH:MM format
-    quiet_hours_end = Column(String(5), nullable=True)
-    
-    # Timezone
-    timezone = Column(String(50), default="UTC")
-    
-    # Additional preferences
-    preferences = Column(JSON, nullable=True)  # Flexible preferences storage
-    
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    
+    max_notifications_per_hour = Column(BigInteger, default=10)
+    max_notifications_per_day = Column(BigInteger, default=50)
+    quiet_hours_start = Column(Text, nullable=True)
+    quiet_hours_end = Column(Text, nullable=True)
+    timezone = Column(Text, default="UTC")
+    preferences = Column(JSONB, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
     def __repr__(self):
-        return f"<UserPreferences(user_id={self.user_id}, email={self.email})>"
+        return f"<UserPreferences(user_id={self.user_id})>"

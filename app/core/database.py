@@ -60,5 +60,7 @@ async def init_db():
         from app.models.analysis import Analysis
         from app.models.price_comparison import PriceComparison
         
-        # Create all tables
-        await conn.run_sync(Base.metadata.create_all)
+        # Database schema already created by db/init/*.sql scripts
+        # Skipping create_all() to avoid UUID/Integer type mismatch conflicts
+        # Tables exist in PostgreSQL with pgvector extensions and JSONB columns
+        pass

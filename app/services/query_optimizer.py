@@ -161,7 +161,7 @@ class QueryOptimizer:
         # Build query with ranking
         stmt = select(Product).where(
             or_(
-                *[Product.name.ilike(f"%{term}%") for term in terms],
+                *[Product.title.ilike(f"%{term}%") for term in terms],
                 *[Product.brand.ilike(f"%{term}%") for term in terms] if terms else [],
                 Product.category.ilike(f"%{query}%")
             )
@@ -244,16 +244,18 @@ class QueryOptimizer:
         return {
             "id": product.id,
             "product_id": product.id,
-            "name": product.name,
+            "title": product.title,
             "brand": product.brand,
             "category": product.category,
-            "current_price": product.current_price,
-            "original_price": product.original_price,
-            "image_url": product.image_url,
-            "product_url": product.product_url,
-            "retailer": product.retailer,
-            "in_stock": product.in_stock,
-            "last_updated": product.last_updated
+            "description": product.description,
+            "main_image": product.main_image,
+            "avg_price": getattr(product, 'avg_price', None),
+            "min_price": getattr(product, 'min_price', None),
+            "max_price": getattr(product, 'max_price', None),
+            "views_count": getattr(product, 'views_count', 0),
+            "searches_count": getattr(product, 'searches_count', 0),
+            "created_at": product.created_at,
+            "updated_at": product.updated_at
         }
     
     async def get_ghost_results(

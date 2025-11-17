@@ -2,6 +2,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const cheerio = require('cheerio');
 // const { RateLimiterRedis } = require('rate-limiter-flexible'); // TODO: Implement Redis rate limiting
 require('dotenv').config();
 
@@ -101,6 +102,69 @@ class ScraperAPI {
         logger.error('Status check failed:', error);
         res.status(500).json({
           status: 'unhealthy',
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    // Debug endpoint to inspect HTML and test selectors
+    this.app.post('/api/debug/selectors', async (req, res) => {
+      try {
+        const { url, site } = req.body;
+
+        if (!url) {
+          return res.status(400).json({
+            error: 'URL is required',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        // Scrape the page
+        const result = await this.scraper.scrapeWithPuppeteer(url, {
+          usePuppeteer: true,
+          selectors: this.getSelectorsForSite(site)
+        });
+
+        if (!result.success) {
+          return res.status(500).json({
+            error: result.error,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        const $ = cheerio.load(result.data.html);
+
+        // Test each selector
+        const selectors = this.getSelectorsForSite(site);
+        const debugInfo = {
+          site,
+          url,
+          htmlLength: result.data.html.length,
+          selectors: {}
+        };
+
+        for (const [key, selector] of Object.entries(selectors)) {
+          if (typeof selector === 'string') {
+            const elements = $(selector);
+            debugInfo.selectors[key] = {
+              selector,
+              found: elements.length,
+              firstElement: elements.length > 0 ? $(elements[0]).html().substring(0, 200) : null,
+              allClasses: elements.length > 0 ? Array.from(new Set(
+                Array.from(elements).map(el => $(el).attr('class')).filter(c => c)
+              )).slice(0, 5) : [],
+              allIds: elements.length > 0 ? Array.from(new Set(
+                Array.from(elements).map(el => $(el).attr('id')).filter(c => c)
+              )).slice(0, 5) : []
+            };
+          }
+        }
+
+        res.json(debugInfo);
+      } catch (error) {
+        logger.error('Debug selector check failed:', error);
+        res.status(500).json({
           error: error.message,
           timestamp: new Date().toISOString()
         });
@@ -342,8 +406,12 @@ class ScraperAPI {
 
         const startTime = Date.now();
 
-        // All available retailers
-        const allSites = ['amazon', 'walmart', 'ebay', 'target', 'bestbuy', 'newegg'];
+        // All available retailers (15+)
+        const allSites = [
+          'amazon', 'walmart', 'ebay', 'target', 'bestbuy', 'newegg',
+          'flipkart', 'shopclues', 'jabong', 'snapdeal', 'myntra',
+          'aliexpress', 'alibaba'
+        ];
 
         const siteUrlGenerators = {
           amazon: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`,
@@ -351,7 +419,14 @@ class ScraperAPI {
           ebay: (q) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}`,
           target: (q) => `https://www.target.com/s?searchTerm=${encodeURIComponent(q)}`,
           bestbuy: (q) => `https://www.bestbuy.com/site/searchpage.jsp?st=${encodeURIComponent(q)}`,
-          newegg: (q) => `https://www.newegg.com/p/pl?d=${encodeURIComponent(q)}`
+          newegg: (q) => `https://www.newegg.com/p/pl?d=${encodeURIComponent(q)}`,
+          flipkart: (q) => `https://www.flipkart.com/search?q=${encodeURIComponent(q)}`,
+          shopclues: (q) => `https://www.shopclues.com/search?q=${encodeURIComponent(q)}`,
+          jabong: (q) => `https://www.jabong.com/search?q=${encodeURIComponent(q)}`,
+          snapdeal: (q) => `https://www.snapdeal.com/search?keyword=${encodeURIComponent(q)}`,
+          myntra: (q) => `https://www.myntra.com/search/${encodeURIComponent(q)}`,
+          aliexpress: (q) => `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(q)}`,
+          alibaba: (q) => `https://www.alibaba.com/trade/search?SearchText=${encodeURIComponent(q)}`
         };
 
         // Generate all URLs
@@ -360,36 +435,49 @@ class ScraperAPI {
           url: siteUrlGenerators[site](query)
         }));
 
-        // Scrape all concurrently with aggressive parallelization
-        const results = await Promise.allSettled(
-          searchTasks.map(async ({ site, url }) => {
-            try {
-              const result = await this.scraper.scrapeWithRetry(url, {
-                selectors: this.getSelectorsForSite(site),
-                usePuppeteer: true,
-                useProxy: true, // Enable proxy rotation
-                cache: true,
-                cacheTTL: 300 // 5 minutes cache
-              });
+        // Scrape with controlled concurrency (max 3 at a time)
+        const maxConcurrent = 3;
+        const results = [];
 
-              if (result.success) {
-                const products = this.extractProductsFromData(result.data, site);
-                return {
-                  site,
-                  url,
-                  products: products.slice(0, max_results_per_site),
-                  count: products.length,
-                  status: 'success'
-                };
-              } else {
-                return { site, url, products: [], count: 0, status: 'failed', error: result.error };
+        for (let i = 0; i < searchTasks.length; i += maxConcurrent) {
+          const batch = searchTasks.slice(i, i + maxConcurrent);
+          logger.info(`Processing batch ${Math.ceil(i / maxConcurrent) + 1}/${Math.ceil(searchTasks.length / maxConcurrent)}`);
+
+          const batchResults = await Promise.allSettled(
+            batch.map(async ({ site, url }) => {
+              try {
+                logger.info(`Starting scrape for ${site}: ${url}`);
+                const result = await this.scraper.scrapeWithRetry(url, {
+                  selectors: this.getSelectorsForSite(site),
+                  usePuppeteer: true,
+                  useProxy: true,
+                  cache: true,
+                  cacheTTL: 300 // 5 minutes cache
+                });
+
+                if (result.success) {
+                  const products = this.extractProductsFromData(result.data, site);
+                  logger.info(`Successfully scraped ${site}: ${products.length} products`);
+                  return {
+                    site,
+                    url,
+                    products: products.slice(0, max_results_per_site),
+                    count: products.length,
+                    status: 'success'
+                  };
+                } else {
+                  logger.warn(`Scrape failed for ${site}: ${result.error}`);
+                  return { site, url, products: [], count: 0, status: 'failed', error: result.error };
+                }
+              } catch (error) {
+                logger.error(`Parallel search error for ${site}:`, error.message);
+                return { site, url, products: [], count: 0, status: 'error', error: error.message };
               }
-            } catch (error) {
-              logger.error(`Parallel search error for ${site}:`, error);
-              return { site, url, products: [], count: 0, status: 'error', error: error.message };
-            }
-          })
-        );
+            })
+          );
+
+          results.push(...batchResults);
+        }
 
         // Process results
         const allProducts = [];
@@ -398,7 +486,7 @@ class ScraperAPI {
         let failCount = 0;
 
         results.forEach((result, index) => {
-          const site = allSites[index];
+          const site = searchTasks[index]?.site;
           if (result.status === 'fulfilled' && result.value.status === 'success') {
             allProducts.push(...result.value.products);
             siteResults[site] = {
@@ -518,55 +606,104 @@ class ScraperAPI {
   getSelectorsForSite(site) {
     const selectors = {
       amazon: {
-        products: '[data-component-type="s-search-result"]',
-        title: 'h2 span',
-        price: '.a-price .a-offscreen',
-        image: 'img.s-image',
-        link: 'h2 a'
+        products: '[data-component-type="s-search-result"], .s-result-item',
+        title: 'h2 span, .a-size-mini, .a-size-base',
+        price: '.a-price, .a-price-whole, [data-a-color="price"]',
+        image: 'img.s-image, img.s-mobile-badge-image',
+        link: 'h2 a, .a-link-normal'
       },
       walmart: {
-        products: '[data-item-id]',
-        title: 'span[data-automation-id="product-title"]',
-        price: 'div[data-automation-id="product-price"] span',
-        image: 'img[data-testid="productTileImage"]',
-        link: 'a'
+        products: 'li[role="listitem"], [class*="ProductCard"], [data-item-id], div[class*="tile"]',
+        title: 'a, span, h2, h3, [class*="title"]',
+        price: 'span, [class*="price"], div[class*="Price"]',
+        image: 'img',
+        link: 'a[href*="/product"], a[href*="/ip/"]'
       },
       ebay: {
-        products: '.s-item',
-        title: '.s-item__title',
-        price: '.s-item__price',
-        image: '.s-item__image img',
-        link: '.s-item__link'
+        products: 'li.s-item, div[class*="s-item"], li[role="listitem"], div[class*="item"]',
+        title: 'h2, h3, span, a, .s-item__title',
+        price: 'span, div, .BOLD, [class*="price"]',
+        image: 'img',
+        link: 'a[href*="/itm/"], a.BOLD, a[href]'
       },
       target: {
-        products: '[data-test="@web/site-top-of-funnel/ProductCardWrapper"]',
-        title: 'a[data-test="product-title"]',
-        price: 'span[data-test="current-price"]',
-        image: 'img',
-        link: 'a[data-test="product-title"]'
+        products: '[data-test*="productCard"], .Card, .product, [class*="ProductCard"]',
+        title: '[data-test="product-title"], .ProductCardDescription__name, h2[class*="title"]',
+        price: '[data-test*="price"], .ProductPrice__current, [class*="price"]',
+        image: 'img[data-test], img[class*="ProductImage"]',
+        link: 'a[href*="/p/"], [class*="ProductCard__link"]'
       },
       bestbuy: {
-        products: '.sku-item',
-        title: '.sku-title a',
-        price: '.priceView-customer-price span',
-        image: 'img.product-image',
-        link: '.sku-title a'
+        products: 'li.sku-item, div[class*="productContainer"], li[role="listitem"], [class*="sku-item"]',
+        title: 'h2, h3, span, a, .sku-title, [class*="title"]',
+        price: 'span, div, [class*="price"], .priceView',
+        image: 'img',
+        link: 'a[href*="/sku/"], a[href*="/product"], .sku-title a'
       },
       newegg: {
-        products: '.item-cell',
-        title: '.item-title',
-        price: '.price-current',
-        image: '.item-img img',
-        link: '.item-title'
+        products: 'div.item-cell, li[class*="product"], div[role="listitem"], [class*="product-item"]',
+        title: 'h2, h3, span, a, .item-title, [class*="title"]',
+        price: 'span, div, [class*="price"], .price-current',
+        image: 'img',
+        link: 'a[href*="/product"], a[href*="/items"], .item-title a'
+      },
+      flipkart: {
+        products: 'div[data-component-type], ._2kHMtA, div[class*="productGrid"]',
+        title: 'a._2r_T1i, ._4rR01T, [class*="productTitle"]',
+        price: '._30jeq3, ._2Kzpj-',
+        image: 'img._396cs4, img[class*="productImage"]',
+        link: 'a._2r_T1i, a[class*="productLink"]'
+      },
+      shopclues: {
+        products: '.productCont, .product-item, [class*="productContainer"]',
+        title: '.p_name, .product-title, h2',
+        price: '.p_discountedprice, .prod-price, [class*="price"]',
+        image: 'img.productThumbImage, img[class*="productImage"]',
+        link: 'a.productCardImg, a.product-link'
+      },
+      jabong: {
+        products: '.productCardContainer, .product-item, [data-component="productCard"]',
+        title: '.productCardName, .product-title, h2',
+        price: '.productCardPrice, .prod-price, [class*="price"]',
+        image: 'img.productCardImage, img[class*="productImage"]',
+        link: 'a.productCardLink, .product-link'
+      },
+      snapdeal: {
+        products: '.productCardImg, .productContainer, [class*="productCard"]',
+        title: '.productCardBody, .productTitle, h2',
+        price: '.discountedPriceText, .productCardPrice, [class*="price"]',
+        image: 'img.productImage, img[class*="product"]',
+        link: 'a.productCardImg, .productCardLink'
+      },
+      myntra: {
+        products: '.productCardImg, .productContainer, [class*="productCard"]',
+        title: '.productBrand, .productTitle, h3',
+        price: '.productDiscountedPriceText, [class*="price"]',
+        image: 'img.productCardImg, img[class*="productImage"]',
+        link: 'a.productCardImg, .productCardLink'
+      },
+      aliexpress: {
+        products: '.organic-list-offer, .search-item-card-wrapper',
+        title: '.organic-list-offer-title, h2[class*="title"]',
+        price: '.search-item-price, ._3c6Seb',
+        image: 'img, [class*="productImage"]',
+        link: 'a[href*="/item/"], .search-item-card-wrapper a'
+      },
+      alibaba: {
+        products: '.organic-list-offer, .search-item, [class*="productItem"]',
+        title: 'a.search-item-link-title, h2, [class*="title"]',
+        price: '.organic-list-offer-price, [class*="price"]',
+        image: 'img, [class*="productImage"]',
+        link: 'a.search-item-link-title, .product-link'
       }
     };
 
     return selectors[site] || {
-      products: '.product, .item, [data-testid*="product"], [class*="product"]',
-      title: 'h1, h2, h3, .title, [class*="title"]',
-      price: '.price, .cost, [class*="price"]',
-      image: 'img',
-      link: 'a'
+      products: '.product, .item, [data-testid*="product"], [class*="product"], li[data-product]',
+      title: 'h1, h2, h3, .title, .name, [class*="title"], [class*="name"]',
+      price: '.price, .cost, [class*="price"], [data-testid*="price"]',
+      image: 'img[src], img[data-src]',
+      link: 'a[href]'
     };
   }
 
@@ -589,40 +726,64 @@ class ScraperAPI {
 
           const $item = $(element);
 
-          // Try to find title - first look in children, then in element itself
-          let title = $item.find(selectors.title).first().text().trim();
-          if (!title) {
-            title = $item.filter(selectors.title).text().trim();
+          // Extract title - be selective to avoid UI text
+          let title = '';
+
+          // Try specific title selectors
+          const titleSelectors = [selectors.title, 'h2 a span', 'h2 span', 'a h2', 'h2 a', 'h1', '.product-name', '.product-title', 'a[href*="product"]'];
+          for (const sel of titleSelectors) {
+            const foundTitle = $item.find(sel).first().text().trim();
+            if (foundTitle && foundTitle.length > 15 && !foundTitle.includes('Check') && !foundTitle.includes('highlighted')) {
+              title = foundTitle;
+              break;
+            }
           }
 
-          // Try to find price - first look in children, then in element itself
+          // Fallback: look for longest reasonable text content in major containers
+          if (!title || title.length < 10) {
+            const allText = $item.find('h2, h3, a, .title, .name, span[class*="title"]').map((idx, el) => $(el).text().trim()).get();
+            const candidateTitles = allText.filter(t => t.length > 10 && t.length < 200 && !t.includes('Check') && !t.includes('highlighted') && !t.includes('Overall'));
+            if (candidateTitles.length > 0) {
+              title = candidateTitles[0];
+            }
+          }
+
+          // Try to find price
           let priceText = $item.find(selectors.price).first().text().trim();
           if (!priceText) {
-            priceText = $item.filter(selectors.price).text().trim();
+            priceText = $item.find('.price, .prod-price, [class*="price"]').first().text().trim();
+          }
+          if (!priceText) {
+            // Try to find any price-like text
+            const allText = $item.text();
+            const priceMatch = allText.match(/\$[\d.,]+|₹[\d.,]+|€[\d.,]+/);
+            priceText = priceMatch ? priceMatch[0] : '';
           }
 
-          // Get image URL - try src, data-src, srcset
-          const imageUrl = $item.find(selectors.image).first().attr('src') ||
-                        $item.find(selectors.image).first().attr('data-src') ||
-                        $item.find(selectors.image).first().attr('data-lazy-src') || '';
+          // Get image URL
+          let imageUrl = $item.find(selectors.image).first().attr('src');
+          if (!imageUrl) imageUrl = $item.find(selectors.image).first().attr('data-src');
+          if (!imageUrl) imageUrl = $item.find(selectors.image).first().attr('data-lazy-src');
+          if (!imageUrl) imageUrl = $item.find('img').first().attr('src');
+          imageUrl = imageUrl || '';
 
-          // Get link - first look in children, then in element itself
+          // Get link
           let link = $item.find(selectors.link).first().attr('href');
-          if (!link) {
-            link = $item.filter('a').attr('href') || $item.closest('a').attr('href') || '';
-          }
+          if (!link) link = $item.filter('a').attr('href');
+          if (!link) link = $item.closest('a').attr('href');
+          if (!link) link = $item.find('a[href]').first().attr('href');
+          link = link || '';
 
           if (i < 3) {
             logger.info(`Product ${i} for ${site}:`);
             logger.info(`  Title: ${title.substring(0, 60)}`);
             logger.info(`  Price: ${priceText}`);
-            logger.info(`  Link: ${link.substring(0, 60)}`);
           }
 
-          // Only add if we have at least a title
-          if (title) {
+          // Only add if we have a reasonable title (10+ chars, not junk)
+          if (title && title.length >= 10 && !title.includes('Check') && !title.includes('highlighted') && !title.includes('Overall') && !title.includes('undefined')) {
             products.push({
-              title,
+              title: title.substring(0, 300), // Limit title length
               price: priceText || 'N/A',
               image: imageUrl,
               link: this.normalizeUrl(link, site),

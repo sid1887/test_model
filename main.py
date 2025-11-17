@@ -80,6 +80,14 @@ async def lifespan(app: FastAPI):
         print(f"🖼️  Image Processor initialized")
     except Exception as e:
         print(f"Warning: Could not initialize Image Processor: {e}")
+    
+    # Initialize Feature Extraction Service (for search functionality)
+    try:
+        from app.services.feature_extraction import feature_extraction_service
+        await feature_extraction_service.initialize()
+        print(f"🔍 Feature Extraction Service initialized (embeddings: {feature_extraction_service.embedding_counter})")
+    except Exception as e:
+        print(f"Warning: Could not initialize Feature Extraction Service: {e}")
 
     yield
 
