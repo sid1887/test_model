@@ -1040,5 +1040,277 @@ class AdaptiveScrapingEngine:
         # Log patterns for analysis
         logger.info(f"Failure pattern recorded: {site} - {strategy} - {result.get('error', 'Unknown')}")
 
+
+class ScrapyServiceClient:
+    """
+    Client for integrating with the Scrapy service
+    Provides access to 17+ retailers with full service integration
+    
+    Features:
+    - Voice search via /api/search/voice
+    - Image search via /api/search/image  
+    - Bulk search via /api/search/bulk
+    - CLIP image analysis integration
+    - CAPTCHA solving integration
+    - HAProxy proxy rotation
+    - Redis caching
+    """
+    
+    def __init__(self, base_url: str = "http://scrapy-service:5000"):
+        self.base_url = base_url
+        self.session = None
+        self.available = False
+        self.supported_retailers = []
+        
+    async def initialize(self):
+        """Initialize Scrapy service client"""
+        if self.session is None:
+            self.session = aiohttp.ClientSession()
+        
+        try:
+            async with self.session.get(
+                f"{self.base_url}/health",
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as response:
+                if response.status == 200:
+                    health = await response.json()
+                    self.available = True
+                    logger.info(f"✅ Scrapy service: {health.get('status')}")
+                    logger.info(f"   Retailers: {health.get('retailers_supported', 0)}")
+                    logger.info(f"   Services: {', '.join(health.get('services', {}).keys())}")
+                    
+                    # Get supported retailers
+                    retailers_resp = await self.session.get(f"{self.base_url}/api/retailers")
+                    if retailers_resp.status == 200:
+                        retailers_data = await retailers_resp.json()
+                        self.supported_retailers = retailers_data.get('retailers', [])
+                    
+                    return True
+                else:
+                    logger.warning(f"⚠️ Scrapy service unhealthy: {response.status}")
+                    return False
+        except Exception as e:
+            logger.warning(f"⚠️ Scrapy service unavailable: {e}")
+            self.available = False
+            return False
+    
+    async def search(self, query: str, retailers: List[str] = None, max_results: int = 10) -> Dict:
+        """
+        Search for products across retailers
+        
+        Args:
+            query: Search query
+            retailers: List of retailer names (defaults to top 10)
+            max_results: Maximum results per retailer
+            
+        Returns:
+            Dict with products and metadata
+        """
+        if not self.session:
+            await self.initialize()
+        
+        if not self.available:
+            logger.warning("Scrapy service not available for search")
+            return {'products': [], 'error': 'Service unavailable'}
+        
+        try:
+            payload = {
+                'query': query,
+                'sites': retailers or self.supported_retailers[:10]
+            }
+            
+            async with self.session.post(
+                f"{self.base_url}/api/search",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=120)
+            ) as response:
+                if response.status == 202:  # Accepted
+                    result = await response.json()
+                    logger.info(f"✅ Scrapy search queued: {result.get('sites_queued')} retailers")
+                    return result
+                else:
+                    error = await response.text()
+                    logger.error(f"Scrapy search failed: {response.status} - {error}")
+                    return {'error': f'Search failed: {response.status}'}
+                    
+        except Exception as e:
+            logger.error(f"Scrapy search error: {e}")
+            return {'error': str(e)}
+    
+    async def voice_search(self, audio_file_path: str) -> Dict:
+        """
+        Voice-based product search
+        
+        Args:
+            audio_file_path: Path to audio file
+            
+        Returns:
+            Dict with transcription and search results
+        """
+        if not self.session:
+            await self.initialize()
+        
+        if not self.available:
+            logger.warning("Scrapy service not available for voice search")
+            return {'error': 'Service unavailable'}
+        
+        try:
+            with open(audio_file_path, 'rb') as f:
+                form = aiohttp.FormData()
+                form.add_field('audio', f, filename='audio.wav')
+                
+                async with self.session.post(
+                    f"{self.base_url}/api/search/voice",
+                    data=form,
+                    timeout=aiohttp.ClientTimeout(total=60)
+                ) as response:
+                    result = await response.json()
+                    logger.info(f"✅ Voice search completed")
+                    return result
+                    
+        except Exception as e:
+            logger.error(f"Voice search error: {e}")
+            return {'error': str(e)}
+    
+    async def image_search(self, image_file_path: str) -> Dict:
+        """
+        Image-based product search using CLIP
+        
+        Args:
+            image_file_path: Path to image file
+            
+        Returns:
+            Dict with CLIP analysis and search results
+        """
+        if not self.session:
+            await self.initialize()
+        
+        if not self.available:
+            logger.warning("Scrapy service not available for image search")
+            return {'error': 'Service unavailable'}
+        
+        try:
+            with open(image_file_path, 'rb') as f:
+                form = aiohttp.FormData()
+                form.add_field('image', f, filename='image.jpg')
+                
+                async with self.session.post(
+                    f"{self.base_url}/api/search/image",
+                    data=form,
+                    timeout=aiohttp.ClientTimeout(total=60)
+                ) as response:
+                    result = await response.json()
+                    logger.info(f"✅ Image search completed")
+                    return result
+                    
+        except Exception as e:
+            logger.error(f"Image search error: {e}")
+            return {'error': str(e)}
+    
+    async def bulk_search(self, queries: List[str], retailers: List[str] = None) -> Dict:
+        """
+        Bulk search across multiple queries and retailers
+        
+        Args:
+            queries: List of search queries
+            retailers: List of retailer names (defaults to all)
+            
+        Returns:
+            Dict with batch_id and job info
+        """
+        if not self.session:
+            await self.initialize()
+        
+        if not self.available:
+            logger.warning("Scrapy service not available for bulk search")
+            return {'error': 'Service unavailable'}
+        
+        try:
+            payload = {
+                'queries': queries,
+                'retailers': retailers or self.supported_retailers
+            }
+            
+            async with self.session.post(
+                f"{self.base_url}/api/search/bulk",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as response:
+                if response.status == 202:  # Accepted
+                    result = await response.json()
+                    logger.info(f"✅ Bulk search queued: {result.get('jobs_queued')} jobs")
+                    return result
+                else:
+                    error = await response.text()
+                    logger.error(f"Bulk search failed: {response.status} - {error}")
+                    return {'error': f'Bulk search failed: {response.status}'}
+                    
+        except Exception as e:
+            logger.error(f"Bulk search error: {e}")
+            return {'error': str(e)}
+    
+    async def get_batch_status(self, batch_id: str) -> Dict:
+        """
+        Get status of a bulk search batch
+        
+        Args:
+            batch_id: Batch identifier
+            
+        Returns:
+            Dict with batch status and progress
+        """
+        if not self.session:
+            await self.initialize()
+        
+        if not self.available:
+            return {'error': 'Service unavailable'}
+        
+        try:
+            async with self.session.get(
+                f"{self.base_url}/api/batch/{batch_id}",
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as response:
+                result = await response.json()
+                return result
+                
+        except Exception as e:
+            logger.error(f"Batch status error: {e}")
+            return {'error': str(e)}
+    
+    async def get_stats(self) -> Dict:
+        """
+        Get Scrapy service statistics
+        
+        Returns:
+            Dict with service statistics
+        """
+        if not self.session:
+            await self.initialize()
+        
+        if not self.available:
+            return {'error': 'Service unavailable'}
+        
+        try:
+            async with self.session.get(
+                f"{self.base_url}/api/stats",
+                timeout=aiohttp.ClientTimeout(total=5)
+            ) as response:
+                result = await response.json()
+                return result
+                
+        except Exception as e:
+            logger.error(f"Stats error: {e}")
+            return {'error': str(e)}
+    
+    async def close(self):
+        """Close the client session"""
+        if self.session:
+            await self.session.close()
+            self.session = None
+
+
 # Global scraping engine instance
 scraping_engine = AdaptiveScrapingEngine()
+
+# Global Scrapy service client
+scrapy_client = ScrapyServiceClient()
