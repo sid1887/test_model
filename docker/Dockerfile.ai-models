@@ -1,0 +1,52 @@
+# AI Models Service - YOLO, EfficientNet, CLIP
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    CUDA=false
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip setuptools wheel
+
+# Core dependencies
+RUN pip install \
+    fastapi==0.115.2 \
+    uvicorn==0.24.0.post1 \
+    pydantic==2.12.3 \
+    httpx==0.25.0
+
+# ML & Computer Vision dependencies
+RUN pip install \
+    torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu \
+    torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cpu \
+    tensorflow==2.18.0 \
+    transformers==4.38.0 \
+    pillow==10.1.0 \
+    numpy==1.24.3 \
+    scikit-image==0.22.0 \
+    opencv-python==4.8.1.78 \
+    ultralytics==8.1.0 \
+    timm==0.9.14 \
+    clip==1.0 \
+    sentence-transformers==2.2.2
+
+WORKDIR /app
+
+# Copy service code
+COPY services/ai-models/ /app/
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost:8001/api/models/health || exit 1
+
+# Run service
+CMD ["python", "main.py"]

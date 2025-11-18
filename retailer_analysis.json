@@ -1,0 +1,87 @@
+{
+  "amazon": {
+    "status": "working",
+    "products": 23,
+    "time": 2.760256052017212
+  },
+  "walmart": {
+    "status": "working",
+    "products": 54,
+    "time": 4.633236408233643
+  },
+  "ebay": {
+    "status": "failed",
+    "products": 0,
+    "time": 2.6282756328582764
+  },
+  "target": {
+    "status": "failed",
+    "products": 0,
+    "time": 2.576009511947632
+  },
+  "bestbuy": {
+    "status": "failed",
+    "products": 0,
+    "time": 30.703561544418335
+  },
+  "newegg": {
+    "status": "failed",
+    "products": 0,
+    "time": 2.241992950439453
+  },
+  "costco": {
+    "status": "failed",
+    "products": 0,
+    "time": 30.689901113510132
+  },
+  "homedepot": {
+    "status": "failed",
+    "products": 0,
+    "time": 2.7429733276367188
+  },
+  "lowes": {
+    "status": "failed",
+    "products": 0,
+    "time": 0.9937210083007812
+  },
+  "macys": {
+    "status": "failed",
+    "products": 0,
+    "time": 1.4948887825012207
+  },
+  "overstock": {
+    "status": "failed",
+    "products": 0,
+    "time": 1.955606460571289
+  },
+  "wayfair": {
+    "status": "failed",
+    "products": 0,
+    "time": 2.1044015884399414
+  },
+  "zappos": {
+    "status": "working",
+    "products": 100,
+    "time": 3.1667239665985107
+  },
+  "bhphotovideo": {
+    "status": "failed",
+    "products": 0,
+    "time": 0.8682923316955566
+  },
+  "nordstrom": {
+    "status": "failed",
+    "products": 0,
+    "time": 1.7372016906738281
+  },
+  "flipkart": {
+    "status": "failed",
+    "products": 0,
+    "time": 1.6385059356689453
+  },
+  "aliexpress": {
+    "status": "failed",
+    "products": 0,
+    "time": 30.70536994934082
+  }
+}

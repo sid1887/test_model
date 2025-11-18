@@ -10,6 +10,8 @@ import logging
 import redis
 import os
 import requests
+import subprocess
+import sys
 from flask import Flask, request, jsonify
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -31,9 +33,9 @@ logger = logging.getLogger(__name__)
 
 # Supported retailers (15+)
 SUPPORTED_RETAILERS = [
-    'amazon', 'walmart', 'ebay', 'target', 'bestbuy', 
+    'amazon', 'walmart', 'ebay', 'target', 'bestbuy',
     'newegg', 'costco', 'homedepot', 'lowes', 'macys',
-    'overstock', 'wayfair', 'zappos', 'bhphotovideo', 
+    'overstock', 'wayfair', 'zappos', 'bhphotovideo',
     'nordstrom', 'flipkart', 'aliexpress'
 ]
 
@@ -82,65 +84,85 @@ def get_retailers():
     })
 
 def perform_search(query, sites=None):
-    """Core search logic that can be reused"""
+    """Core search logic that calls simple_scraper.py subprocess"""
     if sites is None:
         sites = SUPPORTED_RETAILERS[:10]  # Default to first 10
-    
-    # URLs to scrape for all supported retailers
-    urls = {
-        'amazon': f'https://www.amazon.com/s?k={query}',
-        'walmart': f'https://www.walmart.com/search?q={query}',
-        'ebay': f'https://www.ebay.com/sch/i.html?_nkw={query}',
-        'target': f'https://www.target.com/s?searchTerm={query}',
-        'bestbuy': f'https://www.bestbuy.com/site/searchpage.jsp?st={query}',
-        'newegg': f'https://www.newegg.com/p/pl?d={query}',
-        'flipkart': f'https://www.flipkart.com/search?q={query}',
-        'aliexpress': f'https://www.aliexpress.com/wholesale?SearchText={query}',
-        'costco': f'https://www.costco.com/CatalogSearch?keyword={query}',
-        'homedepot': f'https://www.homedepot.com/s/{query}',
-        'lowes': f'https://www.lowes.com/search?searchTerm={query}',
-        'macys': f'https://www.macys.com/shop/search?keyword={query}',
-        'overstock': f'https://www.overstock.com/search?keywords={query}',
-        'wayfair': f'https://www.wayfair.com/keyword.php?keyword={query}',
-        'zappos': f'https://www.zappos.com/search?term={query}',
-        'bhphotovideo': f'https://www.bhphotovideo.com/c/search?Ntt={query}',
-        'nordstrom': f'https://www.nordstrom.com/sr?keyword={query}'
-    }
 
-    # Queue jobs for all sites
-    for site in sites:
-        if site not in urls:
-            continue
+    try:
+        # Filter to valid sites only
+        valid_sites = [s for s in sites if s in SUPPORTED_RETAILERS]
 
-        try:
-            # Store job in Redis for processing
-            job_id = f"{site}:{query}:{datetime.now().timestamp()}"
-            job_data = {
-                'url': urls[site],
-                'site': site,
+        if not valid_sites:
+            logger.warning(f"No valid sites provided for query '{query}'")
+            return {
                 'query': query,
-                'job_id': job_id
+                'status': 'error',
+                'message': 'No valid retailers specified',
+                'products': [],
+                'timestamp': datetime.now().isoformat()
             }
 
-            redis_client.hset(f'scrape_job:{job_id}', mapping=job_data)
-            crawl_stats['total_requests'] += 1
+        # Run simple_scraper.py as subprocess
+        sites_str = ','.join(valid_sites)
+        cmd = [sys.executable, '/app/simple_scraper.py', query, sites_str]
 
-            logger.info(f"Queued scrape job for {site}: {urls[site]}")
+        logger.info(f"Running scraper: {' '.join(cmd)}")
 
-        except Exception as e:
-            logger.error(f"Error queueing {site}: {e}")
-            crawl_stats['failed_requests'] += 1
-            continue
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
-    crawl_stats['successful_requests'] += len(sites)
-    
-    return {
-        'query': query,
-        'status': 'processing',
-        'sites_queued': len(sites),
-        'message': 'Scraping jobs have been queued. Results will be available shortly.',
-        'timestamp': datetime.now().isoformat()
-    }
+        if result.returncode == 0:
+            try:
+                data = json.loads(result.stdout)
+                crawl_stats['successful_requests'] += data.get('total_products', 0)
+                crawl_stats['total_requests'] += len(valid_sites)
+
+                # Cache results in Redis
+                cache_key = f"search_results:{query}:{datetime.now().strftime('%Y-%m-%d')}"
+                redis_client.rpush(cache_key, result.stdout)
+                redis_client.expire(cache_key, 86400)  # 24 hours
+
+                return data
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse scraper output: {e}")
+                logger.error(f"Output: {result.stdout}")
+                return {
+                    'query': query,
+                    'status': 'error',
+                    'message': 'Failed to parse scraper results',
+                    'products': [],
+                    'timestamp': datetime.now().isoformat()
+                }
+        else:
+            logger.error(f"Scraper failed: {result.stderr}")
+            crawl_stats['failed_requests'] += len(valid_sites)
+            return {
+                'query': query,
+                'status': 'error',
+                'message': f'Scraper error: {result.stderr[:200]}',
+                'products': [],
+                'timestamp': datetime.now().isoformat()
+            }
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"Scraper timeout for query '{query}'")
+        crawl_stats['failed_requests'] += len(sites)
+        return {
+            'query': query,
+            'status': 'timeout',
+            'message': 'Scraper timed out after 120 seconds',
+            'products': [],
+            'timestamp': datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        crawl_stats['failed_requests'] += len(sites)
+        return {
+            'query': query,
+            'status': 'error',
+            'message': str(e),
+            'products': [],
+            'timestamp': datetime.now().isoformat()
+        }
 
 @app.route('/api/search', methods=['POST'])
 def search():
@@ -154,11 +176,14 @@ def search():
             return jsonify({'error': 'Query is required'}), 400
 
         result = perform_search(query, sites)
-        return jsonify(result), 202
+
+        # Return 200 if successful, 500 if error
+        status_code = 200 if result.get('status') != 'error' else 500
+        return jsonify(result), status_code
 
     except Exception as e:
         logger.error(f'Search error: {e}')
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'status': 'error'}), 500
 
 @app.route('/api/search/voice', methods=['POST'])
 def voice_search():
@@ -166,28 +191,28 @@ def voice_search():
     try:
         if 'audio' not in request.files:
             return jsonify({'error': 'Audio file is required'}), 400
-        
+
         audio_file = request.files['audio']
-        
+
         # Send audio to voice STT service
         files = {'audio': (audio_file.filename, audio_file.read(), audio_file.content_type)}
         response = requests.post(VOICE_STT_URL, files=files, timeout=30)
-        
+
         if response.status_code != 200:
             return jsonify({'error': 'Voice transcription failed'}), 500
-        
+
         transcription = response.json()
         query = transcription.get('text', '')
-        
+
         if not query:
             return jsonify({'error': 'No text transcribed from audio'}), 400
-        
+
         logger.info(f'Voice search transcribed: {query}')
-        
+
         # Perform regular search with transcribed query
         result = perform_search(query)
         return jsonify(result), 202
-        
+
     except Exception as e:
         logger.error(f'Voice search error: {e}')
         return jsonify({'error': str(e)}), 500
@@ -198,28 +223,28 @@ def image_search():
     try:
         if 'image' not in request.files:
             return jsonify({'error': 'Image file is required'}), 400
-        
+
         image_file = request.files['image']
-        
+
         # Send image to CLIP service
         files = {'image': (image_file.filename, image_file.read(), image_file.content_type)}
         response = requests.post(CLIP_SERVICE_URL, files=files, timeout=30)
-        
+
         if response.status_code != 200:
             return jsonify({'error': 'Image analysis failed'}), 500
-        
+
         analysis = response.json()
         query = analysis.get('description', '')
-        
+
         if not query:
             return jsonify({'error': 'No description extracted from image'}), 400
-        
+
         logger.info(f'Image search description: {query}')
-        
+
         # Perform regular search with image description
         result = perform_search(query)
         return jsonify(result), 202
-        
+
     except Exception as e:
         logger.error(f'Image search error: {e}')
         return jsonify({'error': str(e)}), 500
@@ -263,19 +288,19 @@ def bulk_search():
         data = request.get_json()
         queries = data.get('queries', [])
         retailers = data.get('retailers', SUPPORTED_RETAILERS)
-        
+
         if not queries:
             return jsonify({'error': 'At least one query is required'}), 400
-        
+
         batch_id = f"bulk_{datetime.now().timestamp()}"
         jobs_queued = 0
-        
+
         # Queue all combinations of queries and retailers
         for query in queries:
             for retailer in retailers:
                 if retailer not in SUPPORTED_RETAILERS:
                     continue
-                
+
                 job_id = f"{retailer}:{query}:{batch_id}"
                 job_data = {
                     'query': query,
@@ -284,11 +309,11 @@ def bulk_search():
                     'job_id': job_id,
                     'timestamp': datetime.now().isoformat()
                 }
-                
+
                 redis_client.hset(f'scrape_job:{job_id}', mapping=job_data)
                 redis_client.rpush(f'batch:{batch_id}', job_id)
                 jobs_queued += 1
-        
+
         # Set batch metadata
         redis_client.hset(f'batch_meta:{batch_id}', mapping={
             'total_jobs': jobs_queued,
@@ -298,9 +323,9 @@ def bulk_search():
             'created_at': datetime.now().isoformat()
         })
         redis_client.expire(f'batch_meta:{batch_id}', 7200)  # 2 hours
-        
+
         logger.info(f'Bulk search queued: {jobs_queued} jobs for batch {batch_id}')
-        
+
         return jsonify({
             'status': 'queued',
             'batch_id': batch_id,
@@ -310,7 +335,7 @@ def bulk_search():
             'message': 'Bulk search queued for processing',
             'timestamp': datetime.now().isoformat()
         }), 202
-        
+
     except Exception as e:
         logger.error(f'Bulk search error: {e}')
         return jsonify({'error': str(e)}), 500
@@ -320,21 +345,21 @@ def get_batch_status(batch_id):
     """Get status of a bulk search batch"""
     try:
         batch_meta = redis_client.hgetall(f'batch_meta:{batch_id}')
-        
+
         if not batch_meta:
             return jsonify({'error': 'Batch not found'}), 404
-        
+
         # Get results
         job_ids = redis_client.lrange(f'batch:{batch_id}', 0, -1)
         results = []
         completed = 0
-        
+
         for job_id in job_ids:
             result_key = f'search_results:{job_id}'
             if redis_client.exists(result_key):
                 completed += 1
                 results.extend(json.loads(item) for item in redis_client.lrange(result_key, 0, -1))
-        
+
         return jsonify({
             'batch_id': batch_id,
             'total_jobs': int(batch_meta.get('total_jobs', 0)),
@@ -345,7 +370,7 @@ def get_batch_status(batch_id):
             'created_at': batch_meta.get('created_at', ''),
             'timestamp': datetime.now().isoformat()
         })
-        
+
     except Exception as e:
         logger.error(f'Batch status error: {e}')
         return jsonify({'error': str(e)}), 500
@@ -358,13 +383,13 @@ def stats():
         today = datetime.now().strftime('%Y-%m-%d')
         stats_key = f"stats:scrapy:{today}"
         daily_stats = redis_client.hgetall(stats_key)
-        
+
         # Calculate retailer-specific stats
         retailer_stats = {}
         for retailer in SUPPORTED_RETAILERS:
             key = f'{retailer}_products'
             retailer_stats[retailer] = int(daily_stats.get(key, 0))
-        
+
         return jsonify({
             'stats': crawl_stats,
             'daily_stats': {
