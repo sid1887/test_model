@@ -1,0 +1,416 @@
+version: '3.8'
+
+# Cumpair Microservices Architecture
+# Split from monolithic web container into 8 independent services
+# Reduces restart time from 2-3 min to ~45 seconds
+# Allows independent scaling and development
+
+services:
+  # ========================================================================
+  # EXTERNAL SERVICES (unchanged from original)
+  # ========================================================================
+
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: test_model-postgres-1
+    environment:
+      POSTGRES_DB: cumpair
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: test_model-redis-1
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  scrapy_scraper:
+    image: test_model-scrapy_scraper:latest
+    container_name: test_model-scrapy_scraper-1
+    ports:
+      - "5000:5000"
+    environment:
+      - SERVICE_TYPE=scraper
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  captcha:
+    image: test_model-captcha:latest
+    container_name: test_model-captcha-1
+    ports:
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ========================================================================
+  # MICROSERVICES (new architecture)
+  # ========================================================================
+
+  ai-models:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ai-models
+    container_name: test_model-ai-models-1
+    ports:
+      - "8001:8001"
+    environment:
+      - SERVICE_PORT=8001
+      - CUDA=false
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/models/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - microservices
+
+  hf-connector:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.hf-connector
+    container_name: test_model-hf-connector-1
+    ports:
+      - "8002:8002"
+    environment:
+      - SERVICE_PORT=8002
+      - CUDA=false
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/api/hf/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - microservices
+
+  speech-image:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.speech-image
+    container_name: test_model-speech-image-1
+    ports:
+      - "8003:8003"
+    environment:
+      - SERVICE_PORT=8003
+      - CUDA=false
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/api/media/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - microservices
+
+  feature-extract:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.feature-extract
+    container_name: test_model-feature-extract-1
+    ports:
+      - "8004:8004"
+    environment:
+      - SERVICE_PORT=8004
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/api/features/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - microservices
+
+  scrapy-wrapper:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.scrapy-wrapper
+    container_name: test_model-scrapy-wrapper-1
+    ports:
+      - "8005:8005"
+    environment:
+      - SERVICE_PORT=8005
+      - SCRAPY_SERVICE_URL=http://scrapy_scraper:5000
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      scrapy_scraper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/api/scrapy/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - microservices
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api-gateway
+    container_name: test_model-api-gateway-1
+    ports:
+      - "8000:8000"
+    environment:
+      - SERVICE_PORT=8000
+      - AI_MODELS_URL=http://ai-models:8001
+      - HF_CONNECTOR_URL=http://hf-connector:8002
+      - SPEECH_IMAGE_URL=http://speech-image:8003
+      - FEATURE_EXTRACT_URL=http://feature-extract:8004
+      - SCRAPY_WRAPPER_URL=http://scrapy-wrapper:8005
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/cumpair
+      - REDIS_URL=redis://redis:6379
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-models:
+        condition: service_healthy
+      hf-connector:
+        condition: service_healthy
+      speech-image:
+        condition: service_healthy
+      feature-extract:
+        condition: service_healthy
+      scrapy-wrapper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - microservices
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: test_model-worker-1
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/cumpair
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - full
+      - microservices
+
+  # ========================================================================
+  # PHASE 2: DATA PIPELINE & INTEGRATION SERVICES
+  # ========================================================================
+
+  data-pipeline:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.data-pipeline
+    container_name: test_model-data-pipeline-1
+    ports:
+      - "8006:8006"
+    environment:
+      - SERVICE_PORT=8006
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=cumpair
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - phase2
+
+  scraper-optimization:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.scraper-optimization
+    container_name: test_model-scraper-optimization-1
+    ports:
+      - "8007:8007"
+    environment:
+      - SERVICE_PORT=8007
+      - REDIS_URL=redis://redis:6379/1
+      - SCRAPY_URL=http://scrapy-wrapper:8005
+      - MAX_CONCURRENT=20
+      - REQUEST_TIMEOUT=30
+      - CACHE_TTL=3600
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      redis:
+        condition: service_healthy
+      scrapy-wrapper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - phase2
+
+  multi-source-integration:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.multi-source-integration
+    container_name: test_model-multi-source-integration-1
+    ports:
+      - "8008:8008"
+    environment:
+      - SERVICE_PORT=8008
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=cumpair
+      - NEWSAPI_KEY=${NEWSAPI_KEY}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - phase2
+
+  # ========================================================================
+  # PHASE 5: CELERY BACKGROUND JOBS & TASK QUEUE
+  # ========================================================================
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.celery-worker
+    container_name: test_model-celery-worker-1
+    ports:
+      - "8009:8009"
+    environment:
+      - CELERY_WORKER_PORT=8009
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=cumpair
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8009/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - full
+      - phase5
+      - workers
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.celery-beat
+    container_name: test_model-celery-beat-1
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=cumpair
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - full
+      - phase5
+      - workers
+
+  flower:
+    image: mher/flower:2.0.1
+    container_name: test_model-flower-1
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - full
+      - phase5
+      - workers
+
+# ========================================================================
+# VOLUMES
+# ========================================================================
+
+volumes:
+  postgres_data:
+    driver: local

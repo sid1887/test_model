@@ -1,0 +1,29 @@
+# Multi-Source Integration Service
+# News (NewsAPI), Cryptocurrency (CoinGecko), Stock data (yfinance)
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python dependencies
+RUN pip install --no-cache-dir \
+    fastapi==0.104.1 \
+    uvicorn==0.24.0 \
+    aiohttp==3.9.1 \
+    asyncpg==0.29.0 \
+    yfinance==0.2.32 \
+    pydantic==2.5.0 \
+    python-multipart==0.0.6
+
+COPY services/multi-source-integration/main.py .
+
+EXPOSE 8008
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8008/health')"
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8008", "--workers", "4"]

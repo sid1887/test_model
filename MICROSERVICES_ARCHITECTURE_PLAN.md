@@ -170,15 +170,15 @@ services:
   postgres:
     image: ankane/pgvector:latest
     ports: ["5432:5432"]
-  
+
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
-  
+
   scrapy_scraper:
     image: test_model-scrapy_scraper
     ports: ["5000:5000"]
-  
+
   captcha:
     image: test_model-captcha
     ports: ["9001:9001"]
@@ -354,4 +354,3 @@ services:
 3. **Faster development**: Change one service, rebuild in seconds
 4. **Easy debugging**: Logs per service, health checks per service
 5. **Future scaling**: Can run multiple instances of each service
-

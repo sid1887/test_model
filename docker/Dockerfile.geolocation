@@ -1,0 +1,31 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    postgresql-client \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements-geolocation.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements-geolocation.txt
+
+# Download GeoLite2 City database (if not already available)
+RUN mkdir -p /data && \
+    wget -q -O /data/GeoLite2-City.tar.gz \
+    https://dev.maxmind.com/geoip/geoip2/geolite2/ || echo "GeoIP database fetch failed - use external volume"
+
+# Copy application code
+COPY services/geolocation/main.py .
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:8012/health')" || exit 1
+
+# Run service
+CMD ["python", "main.py"]

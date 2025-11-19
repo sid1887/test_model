@@ -1,0 +1,28 @@
+# Scrapy Wrapper Service - Proxy to Scrapy microservice
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN pip install --upgrade pip setuptools wheel
+
+# Minimal dependencies
+RUN pip install \
+    fastapi==0.115.2 \
+    uvicorn==0.24.0.post1 \
+    pydantic==2.12.3 \
+    httpx==0.25.0 \
+    python-dotenv==1.0.1
+
+WORKDIR /app
+
+# Copy service code
+COPY services/scrapy-wrapper/ /app/
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost:8005/api/scrapy/health || exit 1
+
+# Run service
+CMD ["python", "main.py"]

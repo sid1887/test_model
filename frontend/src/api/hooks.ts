@@ -1,18 +1,218 @@
-// React Query Hooks for Cumpair API
+// React Query Hooks for Cumpair API - Integrated Gateway
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
 import type {
-  SearchResult,
-  CompleteProductContext,
-  PriceComparison,
   ServiceHealth,
   Retailer,
   PredictionRequest,
   PredictionResult,
 } from './types';
 
-// Search Hooks
+// ============================================================================
+// SEARCH HOOKS
+// ============================================================================
+
+export function useSearch(q: string, enabled = true) {
+  return useQuery({
+    queryKey: ['search', q],
+    queryFn: () => api.search(q),
+    enabled: enabled && !!q,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useSemanticSearch(q: string, enabled = true) {
+  return useQuery({
+    queryKey: ['search', 'semantic', q],
+    queryFn: () => api.semanticSearch(q),
+    enabled: enabled && !!q,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAutocomplete(q: string, enabled = true) {
+  return useQuery({
+    queryKey: ['search', 'autocomplete', q],
+    queryFn: () => api.autocomplete(q),
+    enabled: enabled && !!q,
+  });
+}
+
+export function useFacetedSearch(q: string, category?: string, minPrice?: number, maxPrice?: number) {
+  return useQuery({
+    queryKey: ['search', 'faceted', q, category, minPrice, maxPrice],
+    queryFn: () => api.facetedSearch(q, category, minPrice, maxPrice),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useTrendingSearch() {
+  return useQuery({
+    queryKey: ['search', 'trending'],
+    queryFn: () => api.trendingSearch(),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+// ============================================================================
+// ELASTICSEARCH HOOKS
+// ============================================================================
+
+export function useElasticsearchSearch(q: string, enabled = true) {
+  return useQuery({
+    queryKey: ['search', 'elasticsearch', q],
+    queryFn: () => api.elasticsearchSearch(q),
+    enabled: enabled && !!q,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useFuzzySearch(q: string, enabled = true) {
+  return useQuery({
+    queryKey: ['search', 'fuzzy', q],
+    queryFn: () => api.fuzzySearch(q),
+    enabled: enabled && !!q,
+  });
+}
+
+// ============================================================================
+// RECOMMENDATIONS HOOKS
+// ============================================================================
+
+export function useRecommendations(userId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['recommendations', userId],
+    queryFn: () => api.getRecommendations(userId),
+    enabled: enabled && !!userId,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useSimilarProducts(productId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['recommendations', 'similar', productId],
+    queryFn: () => api.getSimilarProducts(productId),
+    enabled: enabled && !!productId,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useTrendingProducts() {
+  return useQuery({
+    queryKey: ['recommendations', 'trending'],
+    queryFn: () => api.getTrendingProducts(),
+    staleTime: 15 * 60 * 1000,
+  });
+}
+
+export function useForecastDemand(productId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['forecast', 'demand', productId],
+    queryFn: () => api.forecastDemand(productId),
+    enabled: enabled && !!productId,
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
+// ============================================================================
+// PRICE ALERT HOOKS
+// ============================================================================
+
+export function useCreatePriceAlert() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { productId: string; targetPrice: number; userId: string }) =>
+      api.createPriceAlert(data.productId, data.targetPrice, data.userId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['alerts', variables.userId] });
+    },
+  });
+}
+
+export function useUserAlerts(userId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['alerts', userId],
+    queryFn: () => api.getUserAlerts(userId),
+    enabled: enabled && !!userId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// ============================================================================
+// REAL-TIME HOOKS
+// ============================================================================
+
+export function useRealtimeStats() {
+  return useQuery({
+    queryKey: ['realtime', 'stats'],
+    queryFn: () => api.getRealtimeStats(),
+    refetchInterval: 5000,
+    staleTime: 2000,
+  });
+}
+
+export function useSendNotification() {
+  return useMutation({
+    mutationFn: (data: { userId: string; message: string }) =>
+      api.sendNotification(data.userId, data.message),
+  });
+}
+
+// ============================================================================
+// EVENTS HOOKS
+// ============================================================================
+
+export function usePublishEvent() {
+  return useMutation({
+    mutationFn: (data: { eventType: string; data: Record<string, unknown>; userId?: string }) =>
+      api.publishEvent(data.eventType, data.data, data.userId),
+  });
+}
+
+export function useEventStream(streamKey: string, enabled = true) {
+  return useQuery({
+    queryKey: ['events', 'stream', streamKey],
+    queryFn: () => api.getEventStream(streamKey),
+    enabled: enabled && !!streamKey,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useUserEvents(userId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['events', 'user', userId],
+    queryFn: () => api.getUserEvents(userId),
+    enabled: enabled && !!userId,
+    refetchInterval: 10000,
+    staleTime: 5000,
+  });
+}
+
+export function useDeadLetterQueue() {
+  return useQuery({
+    queryKey: ['events', 'dlq'],
+    queryFn: () => api.getDeadLetterQueue(),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useRetryEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (eventId: string) => api.retryEvent(eventId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events', 'dlq'] });
+    },
+  });
+}
+
+// ============================================================================
+// LEGACY HOOKS
+// ============================================================================
+
 export function useUnifiedSearch(params: {
   q: string;
   limit?: number;
@@ -20,108 +220,50 @@ export function useUnifiedSearch(params: {
   use_vector?: boolean;
   enrich?: boolean;
 }, enabled = true) {
-  return useQuery<SearchResult>({
+  return useQuery({
     queryKey: ['search', 'unified', params],
-    queryFn: (): Promise<SearchResult> => api.unifiedSearch(params),
+    queryFn: () => api.unifiedSearch(params),
     enabled: enabled && !!params.q,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useLegacySearch(query: string, enabled = true) {
-  return useQuery({
-    queryKey: ['search', 'legacy', query],
-    queryFn: () => api.search(query),
-    enabled: enabled && !!query,
-  });
-}
-
-// Image Search Hook
-export function useImageSearch() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ file, params }: { file: File; params: { limit?: number; enrich?: boolean } }) =>
-      api.imageSearch(file, params),
-    onSuccess: () => {
-      // Invalidate search queries
-      queryClient.invalidateQueries({ queryKey: ['search'] });
-    },
-  });
-}
-
-// Product Hooks
-export function useCompleteProductContext(productId: string, enabled = true) {
-  return useQuery<CompleteProductContext>({
-    queryKey: ['product', 'complete', productId],
-    queryFn: (): Promise<CompleteProductContext> => api.getCompleteProductContext(productId),
-    enabled: enabled && !!productId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-  });
-}
-
-export function useProductAnalysis(productId: string, enabled = true) {
-  return useQuery({
-    queryKey: ['product', 'analysis', productId],
-    queryFn: () => api.analyzeProduct(productId),
-    enabled: enabled && !!productId,
-  });
-}
-
-// Price Comparison Hooks
 export function usePriceComparison(productId: string, days?: number, enabled = true) {
-  return useQuery<PriceComparison>({
+  return useQuery({
     queryKey: ['price-comparison', productId, days],
-    queryFn: (): Promise<PriceComparison> => api.getPriceComparison({ product_id: productId, days }),
+    queryFn: () => api.getPriceComparison({ product_id: productId, days }),
     enabled: enabled && !!productId,
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 1 * 60 * 1000,
   });
 }
 
-// Price Alert Hooks
-export function useCreatePriceAlert() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: { product_id: string; target_price: number; email: string }) =>
-      api.createPriceAlert(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['price-alerts'] });
-    },
-  });
-}
-
-// Prediction Hooks
 export function usePricePrediction() {
   return useMutation<PredictionResult, Error, PredictionRequest>({
-    mutationFn: (data: PredictionRequest): Promise<PredictionResult> => api.runPrediction(data),
+    mutationFn: (data: PredictionRequest) => api.runPrediction(data),
   });
 }
 
-// Service Health Hook
 export function useServiceHealth(refetchInterval?: number) {
   return useQuery<ServiceHealth>({
     queryKey: ['health', 'services'],
-    queryFn: (): Promise<ServiceHealth> => api.getServiceHealth(),
-    refetchInterval: refetchInterval || 30000, // Default 30 seconds
-    staleTime: 10000, // 10 seconds
+    queryFn: () => api.getServiceHealth(),
+    refetchInterval: refetchInterval || 30000,
+    staleTime: 10000,
   });
 }
 
-// Retailers Hook
 export function useRetailers() {
   return useQuery<Retailer[]>({
     queryKey: ['retailers'],
-    queryFn: (): Promise<Retailer[]> => api.getRetailers(),
-    staleTime: 60 * 60 * 1000, // 1 hour
+    queryFn: () => api.getRetailers(),
+    staleTime: 60 * 60 * 1000,
   });
 }
 
-// Metrics Hook
 export function useMetrics() {
   return useQuery<string>({
     queryKey: ['metrics'],
     queryFn: () => api.getMetrics(),
-    refetchInterval: 60000, // 1 minute
+    refetchInterval: 60000,
   });
 }

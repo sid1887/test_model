@@ -1,0 +1,130 @@
+# Docker Compose Configuration for Phase 5.5 Core Services
+# Search & Discovery (8010), User Features & Auth (8011), Geolocation (8012)
+
+version: '3.8'
+
+services:
+
+  # =========================================================================
+  # SEARCH & DISCOVERY SERVICE (Port 8010)
+  # =========================================================================
+  search-discovery:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.search-discovery
+    container_name: search-discovery
+    ports:
+      - "8010:8010"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - productdb_network
+    profiles:
+      - phase5-core
+      - all
+    labels:
+      - "service=search"
+      - "version=1.0"
+      - "port=8010"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8010/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # =========================================================================
+  # USER FEATURES & AUTH SERVICE (Port 8011)
+  # =========================================================================
+  user-auth:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.user-auth
+    container_name: user-auth
+    ports:
+      - "8011:8011"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=info
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-your-client-id}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-your-client-secret}
+      - GOOGLE_REDIRECT_URI=http://localhost:8011/auth/callback
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - productdb_network
+    profiles:
+      - phase5-core
+      - all
+    labels:
+      - "service=user-auth"
+      - "version=1.0"
+      - "port=8011"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8011/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # =========================================================================
+  # GEOLOCATION & REGION SERVICE (Port 8012)
+  # =========================================================================
+  geolocation:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.geolocation
+    container_name: geolocation
+    ports:
+      - "8012:8012"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=info
+      - GEOIP_DB=/data/GeoLite2-City.mmdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - geoip_data:/data
+    networks:
+      - productdb_network
+    profiles:
+      - phase5-core
+      - all
+    labels:
+      - "service=geolocation"
+      - "version=1.0"
+      - "port=8012"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8012/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# =========================================================================
+# NETWORKS
+# =========================================================================
+networks:
+  productdb_network:
+    driver: bridge
+    external: true
+
+# =========================================================================
+# VOLUMES
+# =========================================================================
+volumes:
+  geoip_data:
+    driver: local

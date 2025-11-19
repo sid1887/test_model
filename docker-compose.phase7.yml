@@ -1,0 +1,518 @@
+version: '3.8'
+
+services:
+  # ========================================================================
+  # DATABASES & CACHES
+  # ========================================================================
+
+  # PostgreSQL Primary Nodes (Shards)
+  postgres-primary-0:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data_0:/var/lib/postgresql/data
+      - ./sql/init_shard_0.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-primary-1:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data_1:/var/lib/postgresql/data
+      - ./sql/init_shard_1.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5433:5432"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-primary-2:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data_2:/var/lib/postgresql/data
+      - ./sql/init_shard_2.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5434:5432"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-primary-3:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data_3:/var/lib/postgresql/data
+      - ./sql/init_shard_3.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5435:5432"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL Replica Nodes
+  postgres-replica-0-1:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_replica_0_1:/var/lib/postgresql/data
+    ports:
+      - "5436:5432"
+    networks:
+      - backend
+    depends_on:
+      - postgres-primary-0
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-replica-0-2:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_replica_0_2:/var/lib/postgresql/data
+    ports:
+      - "5437:5432"
+    networks:
+      - backend
+    depends_on:
+      - postgres-primary-0
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-replica-1-1:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_replica_1_1:/var/lib/postgresql/data
+    ports:
+      - "5438:5432"
+    networks:
+      - backend
+    depends_on:
+      - postgres-primary-1
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-replica-1-2:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_replica_1_2:/var/lib/postgresql/data
+    ports:
+      - "5439:5432"
+    networks:
+      - backend
+    depends_on:
+      - postgres-primary-1
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-replica-2-1:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_replica_2_1:/var/lib/postgresql/data
+    ports:
+      - "5440:5432"
+    networks:
+      - backend
+    depends_on:
+      - postgres-primary-2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-replica-2-2:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_replica_2_2:/var/lib/postgresql/data
+    ports:
+      - "5441:5432"
+    networks:
+      - backend
+    depends_on:
+      - postgres-primary-2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-replica-3-1:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_replica_3_1:/var/lib/postgresql/data
+    ports:
+      - "5442:5432"
+    networks:
+      - backend
+    depends_on:
+      - postgres-primary-3
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-replica-3-2:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pg_replica_3_2:/var/lib/postgresql/data
+    ports:
+      - "5443:5432"
+    networks:
+      - backend
+    depends_on:
+      - postgres-primary-3
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Caching & Event Streams
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================================================
+  # MICROSERVICES
+  # ========================================================================
+
+  # Core API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - SEARCH_SERVICE_URL=http://search-service:8010
+      - REALTIME_SERVICE_URL=http://realtime-service:8013
+      - ML_SERVICE_URL=http://ml-service:8014
+      - ELASTICSEARCH_SERVICE_URL=http://elasticsearch-service:8015
+      - EVENT_BUS_URL=http://event-bus-service:8016
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - search-service
+      - realtime-service
+      - ml-service
+      - elasticsearch-service
+      - event-bus-service
+      - redis
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Search Service
+  search-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.search
+    ports:
+      - "8010:8010"
+    environment:
+      - POSTGRES_HOSTS=postgres-primary-0,postgres-primary-1,postgres-primary-2,postgres-primary-3
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres-primary-0:
+        condition: service_healthy
+      postgres-primary-1:
+        condition: service_healthy
+      postgres-primary-2:
+        condition: service_healthy
+      postgres-primary-3:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/search-stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Real-Time WebSocket Service
+  realtime-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.realtime
+    ports:
+      - "8013:8013"
+    environment:
+      - POSTGRES_HOSTS=postgres-primary-0,postgres-primary-1,postgres-primary-2,postgres-primary-3
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres-primary-0:
+        condition: service_healthy
+      postgres-primary-1:
+        condition: service_healthy
+      postgres-primary-2:
+        condition: service_healthy
+      postgres-primary-3:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8013/stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ML Recommendation Engine
+  ml-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml
+    ports:
+      - "8014:8014"
+    environment:
+      - POSTGRES_HOSTS=postgres-primary-0,postgres-primary-1,postgres-primary-2,postgres-primary-3
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres-primary-0:
+        condition: service_healthy
+      postgres-primary-1:
+        condition: service_healthy
+      postgres-primary-2:
+        condition: service_healthy
+      postgres-primary-3:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8014/stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Elasticsearch Service
+  elasticsearch-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.elasticsearch
+    ports:
+      - "8015:8015"
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+      - POSTGRES_HOSTS=postgres-primary-0,postgres-primary-1,postgres-primary-2,postgres-primary-3
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      postgres-primary-0:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8015/stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Event Bus Service
+  event-bus-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.eventbus
+    ports:
+      - "8016:8016"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_HOSTS=postgres-primary-0,postgres-primary-1,postgres-primary-2,postgres-primary-3
+      - LOG_LEVEL=INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres-primary-0:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8016/stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================================================
+  # MONITORING & OBSERVABILITY
+  # ========================================================================
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - backend
+    depends_on:
+      - search-service
+      - realtime-service
+      - ml-service
+      - elasticsearch-service
+      - event-bus-service
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    ports:
+      - "3000:3000"
+    networks:
+      - backend
+    depends_on:
+      - prometheus
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  pg_data_0:
+  pg_data_1:
+  pg_data_2:
+  pg_data_3:
+  pg_replica_0_1:
+  pg_replica_0_2:
+  pg_replica_1_1:
+  pg_replica_1_2:
+  pg_replica_2_1:
+  pg_replica_2_2:
+  pg_replica_3_1:
+  pg_replica_3_2:
+  redis_data:
+  elasticsearch_data:
+  prometheus_data:
+  grafana_data:

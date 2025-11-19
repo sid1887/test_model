@@ -1,0 +1,26 @@
+# Celery Worker Service - Background job processing
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN pip install --upgrade pip setuptools wheel
+
+# Core dependencies
+RUN pip install \
+    celery==5.5.3 \
+    redis==5.3.1 \
+    sqlalchemy==2.0.44 \
+    psycopg2-binary==2.9.9 \
+    python-dotenv==1.0.1 \
+    httpx==0.25.0 \
+    pydantic==2.12.3
+
+WORKDIR /app
+
+# Copy app code
+COPY app/ /app/app/
+
+# Run Celery worker
+CMD ["celery", "-A", "app.worker", "worker", "--loglevel=info"]
